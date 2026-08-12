@@ -69,36 +69,39 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
-  background: rgba(11, 15, 29, 0.88);
+  padding: 8px 16px;
+  background: rgba(11, 15, 29, 0.95);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--glass-border);
   z-index: 100;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .brand-icon {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, var(--primary), var(--secondary));
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 18px;
   color: #070913;
-  box-shadow: 0 0 25px var(--primary-glow);
+  box-shadow: 0 0 16px var(--primary-glow);
 }
 
 .brand-title {
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   letter-spacing: -0.5px;
   background: linear-gradient(90deg, #FFFFFF, var(--primary));
   -webkit-background-clip: text;
@@ -106,12 +109,12 @@ body {
 }
 
 .brand-tag {
-  font-size: 0.7rem;
-  padding: 3px 10px;
+  font-size: 0.65rem;
+  padding: 2px 7px;
   background: rgba(0, 242, 254, 0.15);
   color: var(--primary);
   border: 1px solid rgba(0, 242, 254, 0.35);
-  border-radius: 20px;
+  border-radius: 16px;
   font-weight: 700;
   letter-spacing: 0.5px;
 }
@@ -120,21 +123,22 @@ body {
 .transport-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   background: rgba(20, 26, 48, 0.7);
-  padding: 6px 18px;
-  border-radius: 30px;
+  padding: 4px 12px;
+  border-radius: 24px;
   border: 1px solid var(--glass-border);
+  flex-shrink: 0;
 }
 
 .btn-transport {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-main);
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -144,37 +148,38 @@ body {
 
 .btn-transport:hover {
   background: rgba(255, 255, 255, 0.18);
-  transform: scale(1.08);
+  transform: scale(1.05);
 }
 
 .btn-transport.play-btn {
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: #070913;
-  box-shadow: 0 0 20px var(--primary-glow);
+  box-shadow: 0 0 14px var(--primary-glow);
 }
 
 .btn-transport.play-btn.playing {
   background: var(--accent-pink);
-  box-shadow: 0 0 20px rgba(255, 8, 68, 0.6);
+  box-shadow: 0 0 14px rgba(255, 8, 68, 0.6);
   color: #fff;
 }
 
 .tempo-control {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
+  gap: 5px;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
 .tempo-input {
-  width: 65px;
+  width: 55px;
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid var(--glass-border);
   color: var(--primary);
-  padding: 5px 8px;
+  padding: 4px 6px;
   border-radius: 6px;
   font-weight: 700;
+  font-size: 0.8rem;
   font-family: 'Outfit', sans-serif;
   text-align: center;
 }
@@ -183,30 +188,31 @@ body {
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid var(--glass-border);
   color: var(--text-main);
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
   cursor: pointer;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .btn-action {
-  padding: 9px 18px;
+  padding: 6px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.07);
   color: var(--text-main);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: var(--transition);
 }
 
@@ -218,28 +224,45 @@ body {
 .btn-action.primary {
   background: linear-gradient(135deg, var(--accent-purple), var(--secondary));
   border: none;
-  box-shadow: 0 4px 20px rgba(79, 172, 254, 0.35);
+  box-shadow: 0 3px 12px rgba(79, 172, 254, 0.3);
 }
 
 .btn-action.export {
   background: linear-gradient(135deg, #00E676, #00B0FF);
   color: #070913;
   border: none;
-  box-shadow: 0 4px 20px rgba(0, 230, 118, 0.35);
+  box-shadow: 0 3px 12px rgba(0, 230, 118, 0.3);
 }
 
 .mode-toggle {
   display: flex;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 20px;
-  padding: 3px;
+  border-radius: 16px;
+  padding: 2px;
   border: 1px solid var(--glass-border);
 }
 
+.mode-btn {
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.mode-btn.active {
+  background: var(--primary);
+  color: #070913;
+}
+
 .mode-banner-tip {
-  font-size: 0.78rem;
-  padding: 8px 14px;
-  border-radius: 10px;
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 8px;
   background: linear-gradient(135deg, rgba(0, 242, 254, 0.1), rgba(0, 242, 254, 0.05));
   border: 1px solid rgba(0, 242, 254, 0.3);
   color: var(--text-main);
@@ -247,10 +270,11 @@ body {
   align-items: center;
   gap: 8px;
   transition: var(--transition);
+  margin-bottom: 6px;
 }
 .mode-banner-tip i {
   color: var(--primary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 /* Workspace Navigation Tabs */
@@ -258,15 +282,16 @@ body {
   display: flex;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 3px;
-  gap: 4px;
+  border-radius: 18px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .tab-btn {
-  padding: 6px 14px;
-  border-radius: 16px;
-  font-size: 0.78rem;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 0.75rem;
   font-weight: 700;
   border: none;
   background: transparent;
@@ -274,7 +299,7 @@ body {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   transition: var(--transition);
 }
 
@@ -1200,30 +1225,31 @@ body {
 }
 
 .embedded-card-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .btn-chat-action {
-  flex: 1;
-  padding: 6px 8px;
+  padding: 7px 8px;
   border-radius: 6px;
   font-size: 0.72rem;
   font-weight: 600;
-  border: none;
+  border: 1px solid var(--glass-border);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
+  white-space: nowrap;
   transition: var(--transition);
 }
 
 .btn-chat-action.preview {
   background: rgba(0, 242, 254, 0.15);
   color: #00F2FE;
-  border: 1px solid rgba(0, 242, 254, 0.3);
+  border-color: rgba(0, 242, 254, 0.35);
 }
 .btn-chat-action.preview:hover {
   background: rgba(0, 242, 254, 0.3);
@@ -1232,6 +1258,7 @@ body {
 .btn-chat-action.accept {
   background: linear-gradient(135deg, #11998e, #38ef7d);
   color: #000;
+  border: none;
 }
 .btn-chat-action.accept:hover {
   transform: scale(1.02);

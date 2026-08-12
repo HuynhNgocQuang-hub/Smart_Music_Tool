@@ -36,49 +36,49 @@ class MusicStudioApp {
   }
 
   setupEventListeners() {
-    document.getElementById('btnPlay').addEventListener('click', () => this.togglePlayback());
-    document.getElementById('btnStop').addEventListener('click', () => this.stopPlayback());
-    document.getElementById('btnMetronome').addEventListener('click', (e) => {
+    document.getElementById('btnPlay')?.addEventListener('click', () => this.togglePlayback());
+    document.getElementById('btnStop')?.addEventListener('click', () => this.stopPlayback());
+    document.getElementById('btnMetronome')?.addEventListener('click', (e) => {
       window.audioEngine.metronomeEnabled = !window.audioEngine.metronomeEnabled;
       e.currentTarget.classList.toggle('primary', window.audioEngine.metronomeEnabled);
     });
 
-    document.getElementById('inputBpm').addEventListener('change', (e) => {
+    document.getElementById('inputBpm')?.addEventListener('change', (e) => {
       this.currentProject.bpm = parseInt(e.target.value) || 120;
     });
 
-    document.getElementById('selectKey').addEventListener('change', (e) => {
+    document.getElementById('selectKey')?.addEventListener('change', (e) => {
       this.currentProject.musicKey = e.target.value;
     });
 
-    document.getElementById('btnSaveProject').addEventListener('click', () => this.saveProjectToBackend());
-    document.getElementById('btnExportWav').addEventListener('click', () => {
+    document.getElementById('btnSaveProject')?.addEventListener('click', () => this.saveProjectToBackend());
+    document.getElementById('btnExportWav')?.addEventListener('click', () => {
       window.wavExporter.exportProjectToWav(this.currentProject, this.currentProject.bpm);
     });
 
-    document.getElementById('btnRecordMic').addEventListener('click', () => this.toggleMicRecording());
+    document.getElementById('btnRecordMic')?.addEventListener('click', () => this.toggleMicRecording());
 
-    document.getElementById('btnAiContinueMelody').addEventListener('click', () => this.requestAiContinuation());
-    document.getElementById('btnAiBuildAround').addEventListener('click', () => this.requestAiBuildAround());
-    document.getElementById('btnAiRecommendInst').addEventListener('click', () => this.requestAiRecommendation());
+    document.getElementById('btnAiContinueMelody')?.addEventListener('click', () => this.requestAiContinuation());
+    document.getElementById('btnAiBuildAround')?.addEventListener('click', () => this.requestAiBuildAround());
+    document.getElementById('btnAiRecommendInst')?.addEventListener('click', () => this.requestAiRecommendation());
 
-    document.getElementById('btnPreviewAi').addEventListener('click', () => this.previewAiSuggestion());
-    document.getElementById('btnAcceptAi').addEventListener('click', () => this.acceptAiSuggestion());
-    document.getElementById('btnRejectAi').addEventListener('click', () => this.rejectAiSuggestion());
+    document.getElementById('btnPreviewAi')?.addEventListener('click', () => this.previewAiSuggestion());
+    document.getElementById('btnAcceptAi')?.addEventListener('click', () => this.acceptAiSuggestion());
+    document.getElementById('btnRejectAi')?.addEventListener('click', () => this.rejectAiSuggestion());
 
-    document.getElementById('btnModeBeginner').addEventListener('click', () => {
+    document.getElementById('btnModeBeginner')?.addEventListener('click', () => {
       this.setStudioMode('beginner');
     });
 
-    document.getElementById('btnModeAdvanced').addEventListener('click', () => {
+    document.getElementById('btnModeAdvanced')?.addEventListener('click', () => {
       this.setStudioMode('advanced');
     });
 
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
         e.preventDefault();
         this.togglePlayback();
-      } else if (this.keyNoteMap[e.code] && !e.repeat && e.target.tagName !== 'INPUT') {
+      } else if (this.keyNoteMap[e.code] && !e.repeat && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
         const pitch = this.keyNoteMap[e.code];
         this.playVirtualKey(pitch);
       }
@@ -991,6 +991,7 @@ class MusicStudioApp {
     const aiMsg = {
       id: 'ai-msg-' + Date.now(),
       sender: 'ai',
+      promptText: promptText,
       text: local.text,
       suggestion: local.suggestion,
       timestamp: this.getCurrentTimeString()
@@ -1182,6 +1183,14 @@ class MusicStudioApp {
           btnPreview.innerHTML = `<i class="fa-solid fa-volume-high"></i> Nghe Thử`;
           btnPreview.onclick = () => this.previewChatSuggestion(msg.suggestion);
 
+          const btnRegen = document.createElement('button');
+          btnRegen.className = 'btn-chat-action';
+          btnRegen.style.background = 'rgba(168, 85, 247, 0.2)';
+          btnRegen.style.borderColor = 'rgba(168, 85, 247, 0.4)';
+          btnRegen.style.color = '#e9d5ff';
+          btnRegen.innerHTML = `<i class="fa-solid fa-dice"></i> Biến Tấu Khác`;
+          btnRegen.onclick = () => this.regenerateChatSuggestion(msg);
+
           const btnAccept = document.createElement('button');
           btnAccept.className = 'btn-chat-action accept';
           btnAccept.innerHTML = `<i class="fa-solid fa-check"></i> Thêm`;
@@ -1193,6 +1202,7 @@ class MusicStudioApp {
           btnReject.onclick = () => this.rejectChatSuggestion(msg, msg.suggestion);
 
           actions.appendChild(btnPreview);
+          actions.appendChild(btnRegen);
           actions.appendChild(btnAccept);
           actions.appendChild(btnReject);
           card.appendChild(actions);
@@ -1205,6 +1215,15 @@ class MusicStudioApp {
     });
 
     container.scrollTop = container.scrollHeight;
+  }
+
+  regenerateChatSuggestion(msg) {
+    if (!msg || !msg.promptText) return;
+    const newGen = this.generateAlgorithmicMelodyFromPrompt(msg.promptText);
+    msg.suggestion = newGen.suggestion;
+    msg.text = `🎲 **AI đã tái sáng tạo biến tấu giai điệu độc bản mới** cho đề xuất: "${msg.promptText}"!\n\n` + newGen.text;
+    this.renderChatMessages();
+    this.previewChatSuggestion(msg.suggestion);
   }
 
   renderTypingIndicator(show) {
