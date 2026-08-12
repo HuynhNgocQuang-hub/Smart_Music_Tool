@@ -1,0 +1,13 @@
+{
+  "name": "music-studio-frontend",
+  "version": "1.0.0",
+  "description": "Browser-based Music Studio Frontend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

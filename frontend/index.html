@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA MUSIC STUDIO — Browser DAW & AI Copilot</title>
+  <meta name="description" content="Trải nghiệm Studio tạo nhạc chuyên nghiệp trên trình duyệt tích hợp AI Music Copilot dành cho cả người mới bắt đầu và Producer.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Top Navbar / Studio Header -->
+    <header class="studio-header">
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-wave-square"></i></div>
+        <div>
+          <span class="brand-title">AURA STUDIO</span>
+          <span class="brand-tag">AI COPILOT</span>
+        </div>
+      </div>
+
+      <!-- Transport Bar -->
+      <div class="transport-bar">
+        <button id="btnPlay" class="btn-transport play-btn" title="Phát / Tạm dừng (Space)">
+          <i class="fa-solid fa-play"></i>
+        </button>
+        <button id="btnStop" class="btn-transport" title="Dừng lại">
+          <i class="fa-solid fa-stop"></i>
+        </button>
+        <button id="btnMetronome" class="btn-transport" title="Bật/Tắt gõ nhịp Metronome">
+          <i class="fa-solid fa-drum"></i>
+        </button>
+
+        <div class="tempo-control">
+          <span>BPM</span>
+          <input type="number" id="inputBpm" class="tempo-input" value="120" min="40" max="240">
+        </div>
+
+        <select id="selectKey" class="key-selector">
+          <option value="C Major">C Major (Đô Trưởng)</option>
+          <option value="A Minor">A Minor (La Thứ)</option>
+          <option value="G Major">G Major (Sol Trưởng)</option>
+          <option value="F Major">F Major (Fa Trưởng)</option>
+        </select>
+      </div>
+
+      <!-- Workspace Navigation Tabs -->
+      <div class="workspace-tabs">
+        <button id="tabArranger" class="tab-btn active" onclick="app.switchWorkspace('arranger')">
+          <i class="fa-solid fa-sliders"></i> Phối Khí Beat
+        </button>
+        <button id="tabLyric" class="tab-btn" onclick="app.switchWorkspace('lyric')">
+          <i class="fa-solid fa-pen-nib"></i> Viết Lời & AI Vocal
+        </button>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <div class="mode-toggle">
+          <button id="btnModeBeginner" class="mode-btn active">Dễ làm (Beginner)</button>
+          <button id="btnModeAdvanced" class="mode-btn">Nâng cao (Advanced)</button>
+        </div>
+
+        <button id="btnSaveProject" class="btn-action primary">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Lưu Dự Án
+        </button>
+
+        <button id="btnExportWav" class="btn-action export">
+          <i class="fa-solid fa-file-export"></i> Xuất WAV
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Studio Workplace -->
+    <main class="studio-main">
+
+      <!-- Left Sidebar: Instruments, Sample Library & FX -->
+      <aside class="studio-sidebar">
+        <div class="section-title">
+          <span>Nhạc cụ Virtual</span>
+          <i class="fa-solid fa-guitar"></i>
+        </div>
+
+        <div class="instrument-list">
+          <div class="instrument-card" onclick="app.addTrack('PIANO')">
+            <div class="instrument-info">
+              <div class="instrument-icon"><i class="fa-solid fa-keyboard"></i></div>
+              <span class="instrument-name">Grand Piano</span>
+            </div>
+            <i class="fa-solid fa-plus"></i>
+          </div>
+
+          <div class="instrument-card" onclick="app.addTrack('SYNTH')">
+            <div class="instrument-info">
+              <div class="instrument-icon"><i class="fa-solid fa-sliders"></i></div>
+              <span class="instrument-name">Synth Lead</span>
+            </div>
+            <i class="fa-solid fa-plus"></i>
+          </div>
+
+          <div class="instrument-card" onclick="app.addTrack('BASS')">
+            <div class="instrument-info">
+              <div class="instrument-icon"><i class="fa-solid fa-bolt"></i></div>
+              <span class="instrument-name">Deep Bass</span>
+            </div>
+            <i class="fa-solid fa-plus"></i>
+          </div>
+
+          <div class="instrument-card" onclick="app.addTrack('DRUMS')">
+            <div class="instrument-info">
+              <div class="instrument-icon"><i class="fa-solid fa-drum"></i></div>
+              <span class="instrument-name">Drums Beat</span>
+            </div>
+            <i class="fa-solid fa-plus"></i>
+          </div>
+
+          <div class="instrument-card" onclick="app.addTrack('STRINGS')">
+            <div class="instrument-info">
+              <div class="instrument-icon"><i class="fa-solid fa-music"></i></div>
+              <span class="instrument-name">Ambient Strings</span>
+            </div>
+            <i class="fa-solid fa-plus"></i>
+          </div>
+        </div>
+
+        <!-- Sample Loop Library Panel -->
+        <div style="margin-top: 10px;">
+          <div class="section-title">Thư viện Mẫu (Sample Library)</div>
+          <div class="instrument-list">
+            <div class="instrument-card" onclick="app.addSampleLoop('POP_PIANO')">
+              <div class="instrument-info">
+                <div class="instrument-icon"><i class="fa-solid fa-record-vinyl"></i></div>
+                <span class="instrument-name">Pop Chord Loop</span>
+              </div>
+              <i class="fa-solid fa-file-audio"></i>
+            </div>
+            <div class="instrument-card" onclick="app.addSampleLoop('LOFI_DRUMS')">
+              <div class="instrument-info">
+                <div class="instrument-icon"><i class="fa-solid fa-compact-disc"></i></div>
+                <span class="instrument-name">Lo-Fi Drum Beat</span>
+              </div>
+              <i class="fa-solid fa-file-audio"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Audio Effects Controls (Advanced Mode) -->
+        <div id="masterFxCard" style="margin-top: 10px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); display: none;">
+          <div class="section-title" style="margin-bottom: 6px;">Hiệu ứng Master FX (PRO DAW)</div>
+          <div style="font-size: 0.75rem; display: flex; flex-direction: column; gap: 6px;">
+            <div>
+              <span>Reverb Vang: </span>
+              <input type="range" min="0" max="80" value="30" style="width: 100%; accent-color: var(--primary);" 
+                onchange="window.audioEngine.setReverbLevel(this.value / 100)">
+            </div>
+            <div>
+              <span>Tone Lowpass: </span>
+              <input type="range" min="1000" max="16000" value="12000" style="width: 100%; accent-color: var(--secondary);" 
+                onchange="window.audioEngine.setMasterFilterFrequency(this.value)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Voice Recorder Box -->
+        <div class="voice-recorder-card">
+          <div class="voice-title">
+            <i class="fa-solid fa-microphone-lines"></i>
+            <span>Hát nhẩm / Hum sang Giai điệu</span>
+          </div>
+          <p style="font-size: 0.75rem; color: var(--text-muted);">
+            Hát hoặc huýt sáo một câu nhạc ngắn. AI sẽ tự trích xuất nốt nhạc thành bài hát!
+          </p>
+          <button id="btnRecordMic" class="btn-record-mic">
+            <i class="fa-solid fa-microphone"></i> Bắt đầu Thu Âm
+          </button>
+          <div id="micStatus" style="font-size: 0.75rem; color: var(--primary); text-align: center; display: none;">
+            Đang lắng nghe nốt nhạc... <span id="detectedNote">--</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Workplace 1: Timeline & Track Lanes -->
+      <section id="studioCenterView" class="studio-center">
+        <!-- Mode Information Banner -->
+        <div id="modeBannerTip" class="mode-banner-tip">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span><strong>Chế độ Dễ làm (Beginner Mode):</strong> AI Copilot tự động hỗ trợ phối khí, căn chỉnh cao độ & vần điệu cho bạn!</span>
+        </div>
+
+        <!-- Ruler Bar -->
+        <div class="timeline-ruler">
+          <div class="ruler-ticks">
+            <div class="ruler-tick">1 Bar</div>
+            <div class="ruler-tick">2 Bar</div>
+            <div class="ruler-tick">3 Bar</div>
+            <div class="ruler-tick">4 Bar</div>
+          </div>
+        </div>
+
+        <!-- Track Container -->
+        <div id="tracksContainer" class="tracks-container">
+          <!-- Playhead Marker -->
+          <div id="playhead" class="playhead">
+            <div class="playhead-head"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Virtual Piano Keyboard -->
+        <div class="virtual-keyboard-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">
+              Bàn Phím Nhạc Cụ Ảo (Nhấp chuột hoặc gõ phím A S D F G H J K)
+            </span>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button class="btn-action" style="padding: 4px 10px; font-size: 0.75rem;" onclick="app.openPianoRollModal()">
+                <i class="fa-solid fa-sliders"></i> Trình Soạn Nốt (Piano Roll Grid)
+              </button>
+              <span id="activeInstrumentLabel" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">
+                Nhạc cụ đang chọn: Piano
+              </span>
+            </div>
+          </div>
+
+          <div id="pianoKeys" class="piano-keys">
+            <!-- White Keys -->
+            <div class="key-white" data-note="C4">C4 (A)</div>
+            <div class="key-white" data-note="D4">D4 (S)</div>
+            <div class="key-white" data-note="E4">E4 (D)</div>
+            <div class="key-white" data-note="F4">F4 (F)</div>
+            <div class="key-white" data-note="G4">G4 (G)</div>
+            <div class="key-white" data-note="A4">A4 (H)</div>
+            <div class="key-white" data-note="B4">B4 (J)</div>
+            <div class="key-white" data-note="C5">C5 (K)</div>
+
+            <!-- Black Keys -->
+            <div class="key-black" data-note="C#4" style="left: 9.5%;">C#</div>
+            <div class="key-black" data-note="D#4" style="left: 22%;">D#</div>
+            <div class="key-black" data-note="F#4" style="left: 47%;">F#</div>
+            <div class="key-black" data-note="G#4" style="left: 59.5%;">G#</div>
+            <div class="key-black" data-note="A#4" style="left: 72%;">A#</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Center Workplace 2: Lyric & AI Vocal Studio -->
+      <section id="lyricStudioView" class="lyric-studio-center" style="display: none;">
+        <!-- Lyric Workspace Header / Toolbar -->
+        <div class="lyric-toolbar">
+          <div class="lyric-toolbar-left">
+            <div class="lyric-title-block">
+              <i class="fa-solid fa-music"></i>
+              <span id="lyricProjectTitle" class="lyric-project-name">Viết Lời Bài Hát & Sáng Tạo Vocal AI</span>
+            </div>
+            <div class="lyric-rhyme-tag">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> AI Rhyme Copilot Active
+            </div>
+          </div>
+          <div class="lyric-toolbar-right">
+            <button class="btn-action primary" onclick="app.requestAiLyricIdeas()">
+              <i class="fa-solid fa-lightbulb"></i> Gợi Ý Ý Tưởng Lời
+            </button>
+            <button class="btn-action export" onclick="app.requestAiChorus()">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> AI Viết Điệp Khúc
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Split View: Lyric Editor + AI Vocal Studio -->
+        <div class="lyric-split-container">
+
+          <!-- Left Column: Verse & Chorus Editor -->
+          <div class="lyric-editor-panel">
+
+            <!-- Verse 1 Card -->
+            <div class="lyric-section-card">
+              <div class="lyric-section-header">
+                <span class="section-tag verse">Verse 1 (Đoạn 1)</span>
+                <div class="section-actions">
+                  <button class="btn-icon-sm" onclick="app.generateNextLyricLine('verse1')" title="AI Viết Tiếp Câu">
+                    <i class="fa-solid fa-magic"></i> AI Viết Tiếp
+                  </button>
+                  <button class="btn-icon-sm" onclick="app.synthesizeSectionVocal('verse1')" title="AI Hát Đoạn Này">
+                    <i class="fa-solid fa-microphone-lines"></i> AI Hát Thử
+                  </button>
+                </div>
+              </div>
+              <textarea id="lyricVerse1" class="lyric-textarea" oninput="app.updateLyricSyllable('verse1')" placeholder="Nhập lời bài hát cho Verse 1 hoặc nhờ AI viết tiếp câu hát tại đây...
+Ví dụ:
+Đêm nay mưa rơi nhẹ rơi ngoài hiên vắng
+Tiếng đàn vang lên xua tan đi khoảng trống..."></textarea>
+              <div class="lyric-footer-info">
+                <span id="syllableVerse1">Syllable count: 16 từ</span>
+                <span class="rhyme-hint">Vần gợi ý: <em>vắng - trống - ngóng - mộng</em></span>
+              </div>
+            </div>
+
+            <!-- Chorus Card -->
+            <div class="lyric-section-card chorus">
+              <div class="lyric-section-header">
+                <span class="section-tag chorus">Chorus (Điệp Khúc)</span>
+                <div class="section-actions">
+                  <button class="btn-icon-sm" onclick="app.generateNextLyricLine('chorus')" title="AI Viết Tiếp Chorus">
+                    <i class="fa-solid fa-magic"></i> AI Sáng Tạo
+                  </button>
+                  <button class="btn-icon-sm" onclick="app.synthesizeSectionVocal('chorus')" title="AI Hát Chorus">
+                    <i class="fa-solid fa-microphone-lines"></i> AI Hát Thử
+                  </button>
+                </div>
+              </div>
+              <textarea id="lyricChorus" class="lyric-textarea" oninput="app.updateLyricSyllable('chorus')" placeholder="Điệp khúc cao trào bài hát...
+Ví dụ:
+Hát lên giai điệu tình yêu trong màn đêm
+Cho từng nốt nhạc nhẹ trôi thật êm đềm..."></textarea>
+              <div class="lyric-footer-info">
+                <span id="syllableChorus">Syllable count: 18 từ</span>
+                <span class="rhyme-hint">Vần gợi ý: <em>đêm - êm - thêm - mềm</em></span>
+              </div>
+            </div>
+
+            <!-- Verse 2 Card -->
+            <div class="lyric-section-card">
+              <div class="lyric-section-header">
+                <span class="section-tag verse">Verse 2 (Đoạn 2)</span>
+                <div class="section-actions">
+                  <button class="btn-icon-sm" onclick="app.generateNextLyricLine('verse2')" title="AI Viết Tiếp">
+                    <i class="fa-solid fa-magic"></i> AI Viết Tiếp
+                  </button>
+                  <button class="btn-icon-sm" onclick="app.synthesizeSectionVocal('verse2')" title="AI Hát Đoạn Này">
+                    <i class="fa-solid fa-microphone-lines"></i> AI Hát Thử
+                  </button>
+                </div>
+              </div>
+              <textarea id="lyricVerse2" class="lyric-textarea" oninput="app.updateLyricSyllable('verse2')" placeholder="Nhập lời đoạn 2..."></textarea>
+            </div>
+
+          </div>
+
+          <!-- Right Column: AI Vocal Synthesizer & Voice Models -->
+          <div class="vocal-studio-panel">
+
+            <div class="vocal-panel-header">
+              <i class="fa-solid fa-microphone-lines"></i>
+              <span>AI Vocal Studio & Singer Models</span>
+            </div>
+
+            <p style="font-size: 0.78rem; color: var(--text-muted);">
+              Chọn giọng ca sĩ AI để hát thử bài hát dựa trên lời ca và nhịp Beat nhạc của bạn:
+            </p>
+
+            <!-- Voice Models Selector Grid -->
+            <div class="voice-models-grid">
+              <div class="voice-model-card active" onclick="app.selectVoiceModel('female_pop', this)">
+                <div class="voice-avatar female"><i class="fa-solid fa-user-astronaut"></i></div>
+                <div class="voice-info">
+                  <div class="voice-name">AI Vocal Nữ Bay Bổng</div>
+                  <div class="voice-style">Pop Chill • In-Tune Pitch</div>
+                </div>
+                <i class="fa-solid fa-circle-check voice-check"></i>
+              </div>
+
+              <div class="voice-model-card" onclick="app.selectVoiceModel('male_rnb', this)">
+                <div class="voice-avatar male"><i class="fa-solid fa-user-ninja"></i></div>
+                <div class="voice-info">
+                  <div class="voice-name">AI Vocal Nam Trầm</div>
+                  <div class="voice-style">Deep R&B • Smooth Pitch</div>
+                </div>
+                <i class="fa-solid fa-circle-check voice-check"></i>
+              </div>
+
+              <div class="voice-model-card" onclick="app.selectVoiceModel('lofi_voice', this)">
+                <div class="voice-avatar lofi"><i class="fa-solid fa-headphones-simple"></i></div>
+                <div class="voice-info">
+                  <div class="voice-name">AI Voice Lofi Soft</div>
+                  <div class="voice-style">Whisper • Atmospheric</div>
+                </div>
+                <i class="fa-solid fa-circle-check voice-check"></i>
+              </div>
+            </div>
+
+            <!-- Voice Controls -->
+            <div class="vocal-controls-card">
+              <div class="vocal-control-row">
+                <span class="control-label">Tự Động Chỉnh Cao Độ (Auto-Tune)</span>
+                <input type="range" min="0" max="100" value="80" style="accent-color: var(--primary);">
+              </div>
+              <div class="vocal-control-row">
+                <span class="control-label">Độ Vang Vocal (Reverb Space)</span>
+                <input type="range" min="0" max="100" value="50" style="accent-color: var(--secondary);">
+              </div>
+            </div>
+
+            <!-- Master Vocal Synthesize Button -->
+            <button class="btn-synthesize-full" onclick="app.synthesizeFullSongVocal()">
+              <i class="fa-solid fa-play"></i> AI Hát Thử Toàn Bộ Bài Hát (Vocal + Beat)
+            </button>
+
+            <!-- Vocal Player Output Bar -->
+            <div id="vocalPlayerBar" class="vocal-player-bar" style="display: none;">
+              <div class="vocal-status">
+                <i class="fa-solid fa-wave-square"></i>
+                <span id="vocalStatusText">Đang phát AI Vocal + Beat...</span>
+              </div>
+              <button class="btn-action primary" onclick="app.stopVocalSynthesis()">
+                <i class="fa-solid fa-square"></i> Dừng Phát
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Right Sidebar: AI Copilot Assistant Chat Box -->
+      <aside class="ai-copilot-sidebar">
+        <!-- Header -->
+        <div class="ai-header">
+          <div class="ai-header-left">
+            <div class="ai-badge-icon"><i class="fa-solid fa-robot"></i></div>
+            <div>
+              <div class="ai-title">AI Music Copilot</div>
+              <div class="ai-status-badge">
+                <span class="ai-status-dot"></span> Online • Sẵn sàng hỗ trợ
+              </div>
+            </div>
+          </div>
+          <button class="btn-action" style="padding: 5px 8px; font-size: 0.72rem;" onclick="app.clearChatHistory()" title="Xóa lịch sử chat">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+
+        <!-- Quick Prompt Chips -->
+        <div class="quick-chips-wrapper">
+          <button class="quick-chip" onclick="app.sendQuickChip('Viết tiếp giai điệu ngắn')">
+            <i class="fa-solid fa-arrow-trend-up"></i> Viết tiếp giai điệu
+          </button>
+          <button class="quick-chip" onclick="app.sendQuickChip('Phối khí Bass + Drums')">
+            <i class="fa-solid fa-layer-group"></i> Phối khí (Bass+Drums)
+          </button>
+          <button class="quick-chip" onclick="app.sendQuickChip('Tạo bè hòa âm 3rd')">
+            <i class="fa-solid fa-music"></i> Hòa âm 3rd
+          </button>
+          <button class="quick-chip" onclick="app.sendQuickChip('Tạo nhịp trống Lofi chill')">
+            <i class="fa-solid fa-drum"></i> Trống Lofi
+          </button>
+          <button class="quick-chip" onclick="app.sendQuickChip('Làm cho bài hát vui tươi hơn')">
+            😊 Vui tươi hơn
+          </button>
+          <button class="quick-chip" onclick="app.sendQuickChip('Chuyển bài hát sang sầu lắng')">
+            😢 Sâu lắng hơn
+          </button>
+        </div>
+
+        <!-- Chat Message Stream Area -->
+        <div id="aiChatMessages" class="chat-messages-container">
+          <!-- Messages will be rendered dynamically -->
+        </div>
+
+        <!-- Sticky Chat Input Form Footer -->
+        <form id="aiChatForm" class="chat-input-form" onsubmit="event.preventDefault(); app.handleChatSubmit();">
+          <input type="text" id="aiChatInput" class="chat-input-field" 
+            placeholder="Nói chuyện hoặc đề xuất ý tưởng nhạc với AI..." autocomplete="off">
+          <button type="submit" class="btn-send-chat" title="Gửi lời nhắn">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </form>
+      </aside>
+    </main>
+
+    <!-- AI Suggestion Modal Preview Accept/Reject -->
+    <div id="aiModal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-title">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span id="modalSuggestionTitle">AI Gợi Ý Giai Đệu Mới</span>
+        </div>
+        <div id="modalSuggestionBody" class="modal-body">
+          AI đã tạo thêm một đoạn giai điệu mới. Bạn có thể bấm Nghe Thử trước khi quyết định đưa vào bài hát!
+        </div>
+        <div class="modal-actions">
+          <button id="btnPreviewAi" class="btn-action primary">
+            <i class="fa-solid fa-volume-high"></i> Nghe Thử
+          </button>
+          <button id="btnRejectAi" class="btn-action">
+            <i class="fa-solid fa-xmark"></i> Từ Chối
+          </button>
+          <button id="btnAcceptAi" class="btn-action export">
+            <i class="fa-solid fa-check"></i> Chấp Nhận Về Bài Hát
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Piano Roll Editor Modal -->
+    <div id="pianoRollModal" class="modal-overlay">
+      <div class="modal-card" style="width: 750px; max-width: 90vw;">
+        <div class="modal-title">
+          <i class="fa-solid fa-grip"></i>
+          <span>Piano Roll Editor — Chỉnh Sửa Nốt Nhạc Trực Quan</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">
+          Nhấp chuột vào các ô dưới đây để Thêm / Xóa nốt nhạc vào track hiện tại:
+        </div>
+        
+        <div id="pianoRollGrid" style="display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; background: #090B12; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border);">
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-action primary" onclick="app.closePianoRollModal()">
+            <i class="fa-solid fa-check"></i> Hoàn Tất
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Audio & Application Scripts -->
+  <script src="js/audio/AudioEngine.js"></script>
+  <script src="js/audio/PitchTracker.js"></script>
+  <script src="js/audio/WavExporter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
