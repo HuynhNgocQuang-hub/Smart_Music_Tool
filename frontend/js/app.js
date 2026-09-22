@@ -18,14 +18,22 @@ class MusicStudioApp {
     this.pendingAiSuggestion = null;
     this.isPlaying = false;
     this.isRecordingMic = false;
+    this.isLiveRecordingKeyboard = false;
+    this.octaveShift = 0;
+    this.activeKeyPresses = {};
 
     this.keyNoteMap = {
-      'KeyA': 'C4', 'KeyS': 'D4', 'KeyD': 'E4', 'KeyF': 'F4',
-      'KeyG': 'G4', 'KeyH': 'A4', 'KeyJ': 'B4', 'KeyK': 'C5',
-      'KeyW': 'C#4', 'KeyE': 'D#4', 'KeyT': 'F#4', 'KeyY': 'G#4', 'KeyU': 'A#4'
+      // Bass Octave 3 (Z X C V B N M)
+      'KeyZ': 'C3', 'KeyX': 'D3', 'KeyC': 'E3', 'KeyV': 'F3', 'KeyB': 'G3', 'KeyN': 'A3', 'KeyM': 'B3',
+      // Middle Octave 4 (A S D F G H J)
+      'KeyA': 'C4', 'KeyS': 'D4', 'KeyD': 'E4', 'KeyF': 'F4', 'KeyG': 'G4', 'KeyH': 'A4', 'KeyJ': 'B4',
+      // High Octave 5 (K L ; ')
+      'KeyK': 'C5', 'KeyL': 'D5', 'Semicolon': 'E5', 'Quote': 'F5',
+      // Black Keys (W E T Y U O P)
+      'KeyW': 'C#4', 'KeyE': 'D#4', 'KeyT': 'F#4', 'KeyY': 'G#4', 'KeyU': 'A#4', 'KeyO': 'C#5', 'KeyP': 'D#5'
     };
 
-    this.availablePitches = ['C5', 'B4', 'A4', 'G4', 'F4', 'E4', 'D4', 'C4'];
+    this.availablePitches = ['F5', 'E5', 'D5', 'C5', 'B4', 'A4', 'G4', 'F4', 'E4', 'D4', 'C4', 'B3', 'A3', 'G3', 'F3', 'E3', 'D3', 'C3'];
   }
 
   init() {
@@ -74,18 +82,73 @@ class MusicStudioApp {
       this.setStudioMode('advanced');
     });
 
+    // Keyboard Shortcuts & Playing Engine
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.code === 'Space') {
         e.preventDefault();
         this.togglePlayback();
-      } else if (this.keyNoteMap[e.code] && !e.repeat && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-        const pitch = this.keyNoteMap[e.code];
+      } else if (e.code === 'BracketLeft' || e.code === 'ArrowDown') {
+        this.shiftOctave(-1);
+      } else if (e.code === 'BracketRight' || e.code === 'ArrowUp') {
+        this.shiftOctave(1);
+      } else if (['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].includes(e.code)) {
+        const insts = ['PIANO', 'SYNTH', 'BASS', 'DRUMS', 'STRINGS'];
+        const idx = parseInt(e.code.replace('Digit', '')) - 1;
+        if (insts[idx]) {
+          this.activeInstrument = insts[idx];
+          const label = document.getElementById('activeInstrumentLabel');
+          if (label) label.innerText = `Nhạc cụ: ${this.activeInstrument}`;
+        }
+      } else if (this.keyNoteMap[e.code] && !e.repeat) {
+        const rawPitch = this.keyNoteMap[e.code];
+        const pitch = this.getShiftedPitch(rawPitch);
+        this.activeKeyPresses[e.code] = Date.now();
         this.playVirtualKey(pitch);
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (this.activeKeyPresses[e.code]) {
+        const pressDurationMs = Date.now() - this.activeKeyPresses[e.code];
+        delete this.activeKeyPresses[e.code];
+        if (this.isLiveRecordingKeyboard && this.keyNoteMap[e.code]) {
+          const rawPitch = this.keyNoteMap[e.code];
+          const pitch = this.getShiftedPitch(rawPitch);
+          const durationBeats = Math.max(0.25, (pressDurationMs / 1000) * (this.currentProject.bpm / 60));
+          this.recordLiveKeyNote(pitch, durationBeats);
+        }
       }
     });
   }
 
-  loadInitialProject() {
+  async loadInitialProject() {
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/projects`);
+      if (res.ok) {
+        const projects = await res.json();
+        if (projects && projects.length > 0) {
+          const p = projects[0];
+          this.currentProject = {
+            id: p.id,
+            name: p.name || 'Giai Điệu Đầu Tiên',
+            bpm: p.bpm || 120,
+            musicKey: p.musicKey || 'C Major',
+            tracks: p.tracks || []
+          };
+          if (this.currentProject.tracks.length > 0) {
+            this.activeTrackId = this.currentProject.tracks[0].id;
+          }
+          this.syncHeaderControls();
+          this.renderTracks();
+          return;
+        }
+      }
+    } catch (err) {
+      // Ignore network errors and fallback to local initial project
+    }
+
     this.currentProject = {
       id: 1,
       name: 'Giai Điệu Đầu Tiên',
@@ -149,7 +212,15 @@ class MusicStudioApp {
       this.activeTrackId = this.currentProject.tracks[0].id;
     }
 
+    this.syncHeaderControls();
     this.renderTracks();
+  }
+
+  syncHeaderControls() {
+    const inputBpm = document.getElementById('inputBpm');
+    if (inputBpm && this.currentProject.bpm) inputBpm.value = this.currentProject.bpm;
+    const selectKey = document.getElementById('selectKey');
+    if (selectKey && this.currentProject.musicKey) selectKey.value = this.currentProject.musicKey;
   }
 
   addTrack(instrument = 'PIANO') {
@@ -271,6 +342,9 @@ class MusicStudioApp {
           <div class="track-controls">
             <button class="btn-track-opt ${track.muted ? 'active-mute' : ''}" onclick="event.stopPropagation(); app.toggleMute(${track.id})">M</button>
             <button class="btn-track-opt ${track.solo ? 'active-solo' : ''}" onclick="event.stopPropagation(); app.toggleSolo(${track.id})">S</button>
+            <button class="btn-track-delete" title="Xóa khuôn nhạc này" onclick="event.stopPropagation(); app.deleteTrack(${track.id})">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
           </div>
         </div>
         <div>
@@ -341,11 +415,148 @@ class MusicStudioApp {
     }
   }
 
+  deleteTrack(trackId) {
+    const track = this.currentProject.tracks.find(t => t.id === trackId);
+    if (!track) return;
+
+    const confirmed = window.confirm(`Bạn có chắc muốn xóa khuôn nhạc "${track.name}" không?\nThao tác này không thể hoàn tác.`);
+    if (!confirmed) return;
+
+    this.currentProject.tracks = this.currentProject.tracks.filter(t => t.id !== trackId);
+
+    // Reset active track nếu track bị xóa là track đang active
+    if (this.activeTrackId === trackId) {
+      this.activeTrackId = this.currentProject.tracks.length > 0
+        ? this.currentProject.tracks[0].id
+        : null;
+      this.activeInstrument = this.currentProject.tracks.length > 0
+        ? this.currentProject.tracks[0].instrument
+        : 'PIANO';
+      const label = document.getElementById('activeInstrumentLabel');
+      if (label) {
+        label.innerText = this.currentProject.tracks.length > 0
+          ? `Nhạc cụ đang chọn: ${this.currentProject.tracks[0].name}`
+          : 'Nhạc cụ đang chọn: —';
+      }
+    }
+
+    this.renderTracks();
+
+    // Thông báo ngắn
+    this.showToast(`🗑️ Đã xóa khuôn nhạc "${track.name}"`, 'warning');
+  }
+
+  showToast(message, type = 'info') {
+    const existing = document.getElementById('studio-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'studio-toast';
+    toast.className = `toast ${type}`;
+    toast.innerHTML = message;
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(0);
+      z-index: 9999;
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #fff;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      opacity: 1;
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(12px)';
+      setTimeout(() => toast.remove(), 420);
+    }, 2800);
+  }
+
+  shiftOctave(delta) {
+    this.octaveShift = Math.max(-2, Math.min(2, this.octaveShift + delta));
+    const label = document.getElementById('octaveShiftLabel');
+    if (label) label.innerText = `Octave: ${this.octaveShift > 0 ? '+' : ''}${this.octaveShift}`;
+  }
+
+
+  getShiftedPitch(pitch) {
+    if (!pitch || this.octaveShift === 0) return pitch;
+    const match = pitch.match(/^([A-G]#?)(\d)$/);
+    if (!match) return pitch;
+    const note = match[1];
+    const oct = parseInt(match[2]) + this.octaveShift;
+    const boundedOct = Math.max(1, Math.min(7, oct));
+    return note + boundedOct;
+  }
+
+  toggleLiveKeyboardRecord() {
+    this.isLiveRecordingKeyboard = !this.isLiveRecordingKeyboard;
+    const btn = document.getElementById('btnRecordKeyboard');
+    if (btn) {
+      if (this.isLiveRecordingKeyboard) {
+        btn.classList.add('recording-pulse');
+        btn.innerHTML = `<i class="fa-solid fa-square"></i> ⏹ Dừng Thu Phím`;
+      } else {
+        btn.classList.remove('recording-pulse');
+        btn.innerHTML = `<i class="fa-solid fa-circle"></i> 🔴 Gõ Phím Thu Âm`;
+      }
+    }
+  }
+
+  recordLiveKeyNote(pitch, durationBeats) {
+    let activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId);
+    if (!activeTrack) {
+      activeTrack = this.currentProject.tracks[0];
+    }
+    if (!activeTrack) return;
+
+    if (!activeTrack.clips || activeTrack.clips.length === 0) {
+      activeTrack.clips = [{
+        id: Date.now(),
+        name: 'Đoạn Gõ Phím Thu Âm',
+        startTime: 0,
+        duration: 8,
+        clipType: 'NOTE',
+        noteEvents: []
+      }];
+    }
+
+    const clip = activeTrack.clips[0];
+    const chkQuantize = document.getElementById('chkAutoQuantize');
+    const autoQuantize = chkQuantize ? chkQuantize.checked : true;
+
+    let startTime = clip.noteEvents.length > 0 ?
+      clip.noteEvents[clip.noteEvents.length - 1].startTime + clip.noteEvents[clip.noteEvents.length - 1].duration : 0;
+
+    let finalDuration = durationBeats;
+    if (autoQuantize) {
+      startTime = Math.round(startTime * 2) / 2; // Quantize 1/8 beat (0.5 step)
+      finalDuration = Math.max(0.5, Math.round(durationBeats * 2) / 2);
+    }
+
+    clip.noteEvents.push({
+      pitch: pitch,
+      startTime: startTime % 8,
+      duration: finalDuration,
+      velocity: 100
+    });
+
+    this.renderTracks();
+  }
+
   setupVirtualKeyboard() {
     const keys = document.querySelectorAll('.piano-keys div');
     keys.forEach(k => {
       k.addEventListener('mousedown', () => {
-        const pitch = k.getAttribute('data-note');
+        const rawPitch = k.getAttribute('data-note');
+        const pitch = this.getShiftedPitch(rawPitch);
         this.playVirtualKey(pitch);
       });
     });
@@ -358,33 +569,6 @@ class MusicStudioApp {
     if (keyEl) {
       keyEl.classList.add('active');
       setTimeout(() => keyEl.classList.remove('active'), 250);
-    }
-
-    let activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId);
-    if (activeTrack) {
-      if (!activeTrack.clips || activeTrack.clips.length === 0) {
-        activeTrack.clips = [{
-          id: Date.now(),
-          name: 'Đoạn Thu Trực Tiếp',
-          startTime: 0,
-          duration: 8,
-          clipType: 'NOTE',
-          noteEvents: []
-        }];
-      }
-
-      const clip = activeTrack.clips[0];
-      const nextTime = clip.noteEvents.length > 0 ? 
-        clip.noteEvents[clip.noteEvents.length - 1].startTime + 0.5 : 0;
-
-      clip.noteEvents.push({
-        pitch: pitch,
-        startTime: nextTime % 8,
-        duration: 0.5,
-        velocity: 100
-      });
-
-      this.renderTracks();
     }
   }
 
@@ -400,11 +584,29 @@ class MusicStudioApp {
 
   renderPianoRollGrid() {
     const gridContainer = document.getElementById('pianoRollGrid');
+    if (!gridContainer) return;
     gridContainer.innerHTML = '';
 
-    const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId) || this.currentProject.tracks[0];
-    const clip = (activeTrack && activeTrack.clips && activeTrack.clips[0]) ? activeTrack.clips[0] : null;
-    const existingNotes = clip ? clip.noteEvents : [];
+    let activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId) || this.currentProject.tracks[0];
+    if (!activeTrack) {
+      this.addTrack('PIANO');
+      activeTrack = this.currentProject.tracks[0];
+    }
+
+    if (!activeTrack.clips || activeTrack.clips.length === 0) {
+      activeTrack.clips = [{
+        id: Date.now(),
+        name: 'Piano Roll Clip',
+        startTime: 0,
+        duration: 8,
+        clipType: 'NOTE',
+        noteEvents: []
+      }];
+    }
+
+    const clip = activeTrack.clips[0];
+    if (!clip.noteEvents) clip.noteEvents = [];
+    const existingNotes = clip.noteEvents;
 
     this.availablePitches.forEach(pitch => {
       const row = document.createElement('div');
@@ -469,22 +671,29 @@ class MusicStudioApp {
     } else {
       this.isPlaying = true;
       const playBtn = document.getElementById('btnPlay');
-      playBtn.classList.add('playing');
-      playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      if (playBtn) {
+        playBtn.classList.add('playing');
+        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      }
 
-      window.audioEngine.startPlayback(this.currentProject.bpm, (currentBeat) => {
+      window.audioEngine.startPlayback(this.currentProject.bpm, (currentBeatTick) => {
         const playhead = document.getElementById('playhead');
         if (playhead) {
-          playhead.style.left = `${210 + (currentBeat * 20)}px`;
+          playhead.style.left = `${210 + ((currentBeatTick / 4) * 40)}px`;
         }
+
+        const hasSolo = this.currentProject.tracks.some(t => t.solo);
 
         this.currentProject.tracks.forEach(track => {
           if (track.muted) return;
+          if (hasSolo && !track.solo) return;
+
           if (track.clips) {
             track.clips.forEach(clip => {
               if (clip.noteEvents) {
                 clip.noteEvents.forEach(note => {
-                  if (Math.abs((clip.startTime + note.startTime) * 2 - currentBeat) < 0.1) {
+                  const noteTickStep = Math.round((clip.startTime + note.startTime) * 4);
+                  if (Math.abs(noteTickStep - currentBeatTick) < 0.1) {
                     window.audioEngine.playNote(note.pitch, note.duration, track.instrument, track.volume / 100, track.pan);
                   }
                 });
@@ -580,66 +789,87 @@ class MusicStudioApp {
   }
 
   generateLocalPromptAi(promptText) {
-    let notes = [
-      { pitch: 'C4', startTime: 0, duration: 1.0, velocity: 95 },
-      { pitch: 'E4', startTime: 1.0, duration: 1.0, velocity: 95 },
-      { pitch: 'G4', startTime: 2.0, duration: 1.0, velocity: 95 },
-      { pitch: 'B4', startTime: 3.0, duration: 2.0, velocity: 100 }
-    ];
-    let inst = 'PIANO';
-
-    if (promptText.includes('trống') || promptText.includes('drum')) {
-      inst = 'DRUMS';
-      notes = [
-        { pitch: 'C2', startTime: 0, duration: 0.5, velocity: 110 },
-        { pitch: 'F#2', startTime: 0.5, duration: 0.5, velocity: 80 },
-        { pitch: 'D2', startTime: 1.0, duration: 0.5, velocity: 100 }
-      ];
-    } else if (promptText.includes('bass')) {
-      inst = 'BASS';
-      notes = [
-        { pitch: 'C2', startTime: 0, duration: 2, velocity: 100 },
-        { pitch: 'G2', startTime: 2, duration: 2, velocity: 100 }
-      ];
-    }
-
+    const res = this.generateAlgorithmicMelodyFromPrompt(promptText);
     const suggestion = {
       id: Date.now(),
       suggestionType: `TẠO NHẠC TỪ CÂU LỆNH ('${promptText}')`,
-      explanation: `AI Copilot đã tổng hợp xong đoạn nhạc theo ý tưởng '${promptText}' của bạn. Hãy Nghe Thử!`,
-      targetInstrument: inst,
-      suggestedNotes: notes
+      explanation: res.text,
+      targetInstrument: res.suggestion ? res.suggestion.targetInstrument : 'PIANO',
+      suggestedNotes: res.suggestion ? res.suggestion.suggestedNotes : []
     };
-
     this.openAiModal(suggestion);
   }
 
   async requestAiHarmony() {
-    const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId) || this.currentProject.tracks[0];
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/ai/harmony`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instrument: 'STRINGS' })
+      });
+      if (res.ok) {
+        const suggestion = await res.json();
+        this.openAiModal(suggestion);
+        return;
+      }
+    } catch (e) {}
+
+    const musicKey = this.currentProject.musicKey || 'C Major';
+    const keyScale = this.getKeyScalePitches(musicKey);
+    const notes = [];
+    let doubleTime = 0.0;
+
+    for (let i = 0; i < 6; i++) {
+      const idx = (i * 2 + 2) % keyScale.length;
+      const dur = (i % 2 === 0) ? 1.0 : 0.5;
+      notes.push({ pitch: keyScale[idx], startTime: doubleTime, duration: dur, velocity: 85 + Math.floor(Math.random() * 20) });
+      doubleTime += dur;
+    }
+
     const suggestion = {
       id: Date.now(),
       suggestionType: 'TẠO NỐT BÈ HÒA ÂM (HARMONY 3RD)',
-      explanation: 'AI đã tự động tạo lớp nốt bè hòa âm quãng 3 (Harmony 3rd) quyến rũ cho bài hát!',
+      explanation: `AI đã tự động tạo lớp nốt bè hòa âm 3rd chuẩn tông ${musicKey} cho bài hát!`,
       targetInstrument: 'STRINGS',
-      suggestedNotes: [
-        { pitch: 'E4', startTime: 0, duration: 1, velocity: 80 },
-        { pitch: 'G4', startTime: 1, duration: 1, velocity: 80 },
-        { pitch: 'B4', startTime: 2, duration: 1, velocity: 80 },
-        { pitch: 'D5', startTime: 3, duration: 2, velocity: 85 }
-      ]
+      suggestedNotes: notes
     };
     this.openAiModal(suggestion);
   }
 
   async requestAiArrangement() {
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/ai/arrangement`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const suggestion = await res.json();
+        this.openAiModal(suggestion);
+        return;
+      }
+    } catch (e) {}
+
+    const musicKey = this.currentProject.musicKey || 'C Major';
+    const keyScale = this.getKeyScalePitches(musicKey);
+    const notes = [];
+    let time = 0;
+    const prog = [0, 4, 5, 3];
+
+    for (let bar = 0; bar < 4; bar++) {
+      const root = keyScale[prog[bar % prog.length]];
+      const fifth = keyScale[(prog[bar % prog.length] + 4) % keyScale.length];
+      notes.push({ pitch: root, startTime: time, duration: 2.0, velocity: 95 });
+      notes.push({ pitch: fifth, startTime: time + 0.5, duration: 1.5, velocity: 85 });
+      time += 2.0;
+    }
+
     const suggestion = {
       id: Date.now(),
       suggestionType: 'BỐ CỤC CẤU TRÚC BÀI HÁT (ARRANGEMENT)',
-      explanation: 'AI đã sắp xếp cấu trúc bài hát hoàn chỉnh (Intro -> Verse -> Chorus) với các lớp hòa âm phong phú!',
+      explanation: `AI đã sắp xếp bố cục bài hát hoàn chỉnh (Intro -> Verse -> Chorus) trên âm giai ${musicKey}!`,
       suggestedTracks: [
         {
           id: Date.now() + 30,
-          name: 'Intro & Chorus Piano',
+          name: 'Dynamic Piano Progression',
           instrument: 'PIANO',
           volume: 85,
           pan: 0,
@@ -651,11 +881,7 @@ class MusicStudioApp {
             startTime: 0,
             duration: 8,
             clipType: 'NOTE',
-            noteEvents: [
-              { pitch: 'C4', startTime: 0, duration: 2, velocity: 90 },
-              { pitch: 'G4', startTime: 2, duration: 2, velocity: 90 },
-              { pitch: 'A4', startTime: 4, duration: 2, velocity: 90 }
-            ]
+            noteEvents: notes
           }]
         }
       ]
@@ -665,37 +891,78 @@ class MusicStudioApp {
 
   async requestAiContinuation() {
     const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId) || this.currentProject.tracks[0];
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/ai/continue-melody`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instrument: activeTrack ? activeTrack.instrument : 'PIANO' })
+      });
+      if (res.ok) {
+        const suggestion = await res.json();
+        this.openAiModal(suggestion);
+        return;
+      }
+    } catch (e) {}
+
     this.generateLocalAiContinuation(activeTrack);
   }
 
   generateLocalAiContinuation(activeTrack) {
+    const musicKey = this.currentProject.musicKey || 'C Major';
+    const keyScale = this.getKeyScalePitches(musicKey);
+    const notes = [];
+    let currentBeat = 0;
+    let idx = Math.floor(Math.random() * keyScale.length);
+
+    for (let i = 0; i < 8; i++) {
+      const step = Math.floor(Math.random() * 5) - 2;
+      idx = Math.max(0, Math.min(keyScale.length - 1, idx + step));
+      const dur = (i % 2 === 0) ? 1.0 : 0.5;
+      notes.push({ pitch: keyScale[idx], startTime: currentBeat, duration: dur, velocity: 90 + Math.floor(Math.random() * 20) });
+      currentBeat += dur;
+    }
+
     const fallbackSuggestion = {
       id: Date.now(),
       suggestionType: 'CONTINUE_MELODY',
-      explanation: 'AI Copilot đã gợi ý chuỗi 8 nốt nhạc sáng tạo tương thích với ca khúc của bạn. Hãy Nghe Thử!',
+      explanation: `AI Copilot đã gợi ý chuỗi nốt nhạc sáng tạo tương thích với ca khúc chuẩn tông ${musicKey}. Hãy Nghe Thử!`,
       targetInstrument: activeTrack ? activeTrack.instrument : 'PIANO',
-      suggestedNotes: [
-        { pitch: 'E4', startTime: 0, duration: 0.5, velocity: 90 },
-        { pitch: 'G4', startTime: 0.5, duration: 0.5, velocity: 95 },
-        { pitch: 'A4', startTime: 1.0, duration: 1.0, velocity: 100 },
-        { pitch: 'C5', startTime: 2.0, duration: 1.0, velocity: 105 },
-        { pitch: 'B4', startTime: 3.0, duration: 0.5, velocity: 90 },
-        { pitch: 'G4', startTime: 3.5, duration: 0.5, velocity: 95 },
-        { pitch: 'E4', startTime: 4.0, duration: 2.0, velocity: 100 }
-      ]
+      suggestedNotes: notes
     };
     this.openAiModal(fallbackSuggestion);
   }
 
   async requestAiBuildAround() {
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/ai/build-around-melody`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      if (res.ok) {
+        const suggestion = await res.json();
+        this.openAiModal(suggestion);
+        return;
+      }
+    } catch (e) {}
+
+    const bassPitches = ['C2', 'G2', 'A2', 'F2', 'D2', 'E2'];
+    const bassNotes = [];
+    let time = 0;
+    for (let i = 0; i < 4; i++) {
+      const p = bassPitches[Math.floor(Math.random() * bassPitches.length)];
+      bassNotes.push({ pitch: p, startTime: time, duration: 2.0, velocity: 100 });
+      time += 2.0;
+    }
+
     const fallbackSuggestion = {
       id: Date.now(),
       suggestionType: 'BUILD_AROUND_MELODY',
-      explanation: 'AI đã tự tạo thêm 2 Track hòa âm (Deep Bass & Drum Beat) để phối cùng bài hát!',
+      explanation: 'AI đã tự tạo thêm 2 Track hòa âm (Deep Bass & Drum Beat) ngẫu hứng để phối cùng bài hát!',
       suggestedTracks: [
         {
           id: Date.now() + 10,
-          name: 'AI Deep Bass',
+          name: 'AI Deep Bass Groove',
           instrument: 'BASS',
           volume: 85,
           pan: 0,
@@ -707,12 +974,7 @@ class MusicStudioApp {
             startTime: 0,
             duration: 8,
             clipType: 'NOTE',
-            noteEvents: [
-              { pitch: 'C2', startTime: 0, duration: 2, velocity: 100 },
-              { pitch: 'G2', startTime: 2, duration: 2, velocity: 100 },
-              { pitch: 'A2', startTime: 4, duration: 2, velocity: 100 },
-              { pitch: 'F2', startTime: 6, duration: 2, velocity: 100 }
-            ]
+            noteEvents: bassNotes
           }]
         }
       ]
@@ -721,15 +983,18 @@ class MusicStudioApp {
   }
 
   async requestAiRecommendation() {
+    const instPool = ['STRINGS', 'SYNTH', 'GUITAR'];
+    const picked = instPool[Math.floor(Math.random() * instPool.length)];
+
     const fallbackSuggestion = {
       id: Date.now(),
       suggestionType: 'INSTRUMENT_RECOMMENDATION',
-      explanation: 'AI đề xuất phối thêm nhạc cụ "STRINGS" (Dàn dây hòa tấu) giúp giai điệu bay bổng và sâu lắng hơn.',
+      explanation: `AI đề xuất phối thêm nhạc cụ "${picked}" giúp giai điệu bay bổng và sâu lắng hơn.`,
       suggestedTracks: [
         {
           id: Date.now() + 20,
-          name: 'Ambient Strings',
-          instrument: 'STRINGS',
+          name: `AI ${picked}`,
+          instrument: picked,
           volume: 75,
           pan: 0,
           muted: false,
@@ -742,15 +1007,23 @@ class MusicStudioApp {
   }
 
   requestMoodVariation(mood) {
+    const musicKey = this.currentProject.musicKey || 'C Major';
+    const keyScale = this.getKeyScalePitches(musicKey);
+    const notes = [];
+    let time = 0;
+
+    for (let i = 0; i < 6; i++) {
+      const p = keyScale[Math.floor(Math.random() * keyScale.length)];
+      const dur = ("sadder".includes(mood)) ? 1.5 : 0.5;
+      notes.push({ pitch: p, startTime: time, duration: dur, velocity: 85 + Math.floor(Math.random() * 25) });
+      time += dur;
+    }
+
     const fallbackSuggestion = {
       id: Date.now(),
       suggestionType: 'MOOD_VARIATION',
       explanation: `AI đã biến đổi giai điệu bài hát sang sắc thái cảm xúc: '${mood.toUpperCase()}'.`,
-      suggestedNotes: [
-        { pitch: 'A3', startTime: 0, duration: 1.5, velocity: 80 },
-        { pitch: 'C4', startTime: 1.5, duration: 1.5, velocity: 85 },
-        { pitch: 'E4', startTime: 3.0, duration: 2.0, velocity: 90 }
-      ]
+      suggestedNotes: notes
     };
     this.openAiModal(fallbackSuggestion);
   }
@@ -795,6 +1068,12 @@ class MusicStudioApp {
   acceptAiSuggestion() {
     if (!this.pendingAiSuggestion) return;
 
+    if (this.pendingAiSuggestion.id && this.currentProject.id) {
+      fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/ai/suggestions/${this.pendingAiSuggestion.id}/status?status=ACCEPTED`, {
+        method: 'PUT'
+      }).catch(() => {});
+    }
+
     if (this.pendingAiSuggestion.suggestedNotes) {
       const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId) || this.currentProject.tracks[0];
       if (activeTrack) {
@@ -833,18 +1112,26 @@ class MusicStudioApp {
 
   async saveProjectToBackend() {
     try {
-      const res = await fetch(`${this.apiBaseUrl}/projects`, {
-        method: 'POST',
+      const isExisting = this.currentProject.id && typeof this.currentProject.id === 'number';
+      const url = isExisting ? `${this.apiBaseUrl}/projects/${this.currentProject.id}` : `${this.apiBaseUrl}/projects`;
+      const method = isExisting ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: this.currentProject.name,
           bpm: this.currentProject.bpm,
-          musicKey: this.currentProject.musicKey
+          musicKey: this.currentProject.musicKey,
+          tracks: this.currentProject.tracks
         })
       });
 
       if (res.ok) {
         const saved = await res.json();
+        if (saved && saved.id) {
+          this.currentProject.id = saved.id;
+        }
         alert(`Đã lưu dự án thành công lên Backend (ID: ${saved.id})!`);
       } else {
         localStorage.setItem('aura_project', JSON.stringify(this.currentProject));
@@ -975,7 +1262,7 @@ class MusicStudioApp {
     this.processUserChatMessage(text);
   }
 
-  processUserChatMessage(promptText) {
+  async processUserChatMessage(promptText) {
     // 1. Append user message immediately
     const userMsg = {
       id: 'msg-' + Date.now(),
@@ -984,29 +1271,75 @@ class MusicStudioApp {
       timestamp: this.getCurrentTimeString()
     };
     this.chatHistory.push(userMsg);
-
-    // 2. Generate instant real-time AI Response (0ms delay)
-    const local = this.generateLocalAiChatResponse(promptText);
-
-    const aiMsg = {
-      id: 'ai-msg-' + Date.now(),
-      sender: 'ai',
-      promptText: promptText,
-      text: local.text,
-      suggestion: local.suggestion,
-      timestamp: this.getCurrentTimeString()
-    };
-    this.chatHistory.push(aiMsg);
-
-    // 3. Render messages instantly
     this.renderChatMessages();
+    this.renderTypingIndicator(true);
 
-    // 4. Non-blocking background sync to backend (silent, doesn't delay UI)
-    fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/ai/natural-language`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptText })
-    }).catch(() => {});
+    try {
+      // 2. Fetch context-aware response from Backend Spring Boot AI Copilot
+      const projectId = (this.currentProject && this.currentProject.id) ? this.currentProject.id : 1;
+      const res = await fetch(`${this.apiBaseUrl}/projects/${projectId}/ai/natural-language`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptText,
+          musicKey: (this.currentProject && this.currentProject.musicKey) ? this.currentProject.musicKey : 'C Major',
+          bpm: (this.currentProject && this.currentProject.bpm) ? this.currentProject.bpm : 120
+        })
+      });
+
+      this.renderTypingIndicator(false);
+
+      if (res.ok) {
+        const data = await res.json();
+        let suggestion = null;
+        if ((data.suggestedNotes && data.suggestedNotes.length > 0) || (data.suggestedTracks && data.suggestedTracks.length > 0)) {
+          const inst = data.targetInstrument || 'PIANO';
+          suggestion = {
+            id: data.id || Date.now(),
+            title: `🎵 AI Producer: Giai điệu ${inst} (${this.currentProject.musicKey || 'C Major'})`,
+            description: `Chuỗi ${data.suggestedNotes ? data.suggestedNotes.length : 0} nốt nhạc độc bản được phối tự động cho bài hát.`,
+            targetInstrument: inst,
+            suggestedNotes: data.suggestedNotes || [],
+            suggestedTracks: data.suggestedTracks || []
+          };
+        }
+
+        const aiMsg = {
+          id: 'ai-msg-' + Date.now(),
+          sender: 'ai',
+          promptText: promptText,
+          text: data.explanation || 'Đã phân tích đề xuất và tạo ý tưởng nhạc cho bạn!',
+          suggestion: suggestion,
+          timestamp: this.getCurrentTimeString()
+        };
+        this.chatHistory.push(aiMsg);
+      } else {
+        const local = this.generateLocalAiChatResponse(promptText);
+        const aiMsg = {
+          id: 'ai-msg-' + Date.now(),
+          sender: 'ai',
+          promptText: promptText,
+          text: local.text,
+          suggestion: local.suggestion,
+          timestamp: this.getCurrentTimeString()
+        };
+        this.chatHistory.push(aiMsg);
+      }
+    } catch (err) {
+      this.renderTypingIndicator(false);
+      const local = this.generateLocalAiChatResponse(promptText);
+      const aiMsg = {
+        id: 'ai-msg-' + Date.now(),
+        sender: 'ai',
+        promptText: promptText,
+        text: local.text,
+        suggestion: local.suggestion,
+        timestamp: this.getCurrentTimeString()
+      };
+      this.chatHistory.push(aiMsg);
+    }
+
+    this.renderChatMessages();
   }
 
   generateLocalAiChatResponse(promptText) {
@@ -1142,7 +1475,15 @@ class MusicStudioApp {
       bubble.appendChild(header);
 
       const content = document.createElement('div');
-      let formattedText = msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+      content.className = 'chat-bubble-content';
+      let rawText = msg.text || '';
+      let formattedText = rawText
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n\* /g, '<br>• ')
+        .replace(/\n- /g, '<br>• ')
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
       content.innerHTML = formattedText;
       bubble.appendChild(content);
 
@@ -1164,15 +1505,17 @@ class MusicStudioApp {
         if (msg.suggestion.status === 'accepted') {
           const acceptedBadge = document.createElement('div');
           acceptedBadge.style.color = '#38ef7d';
-          acceptedBadge.style.fontSize = '0.75rem';
+          acceptedBadge.style.fontSize = '0.78rem';
           acceptedBadge.style.fontWeight = 'bold';
-          acceptedBadge.innerHTML = `<i class="fa-solid fa-check-circle"></i> Đã chấp nhận vào bài hát`;
+          acceptedBadge.style.marginTop = '8px';
+          acceptedBadge.innerHTML = `<i class="fa-solid fa-check-circle"></i> Đã chấp nhận & thêm vào bài hát`;
           card.appendChild(acceptedBadge);
         } else if (msg.suggestion.status === 'rejected') {
           const rejectedBadge = document.createElement('div');
           rejectedBadge.style.color = '#ef4444';
-          rejectedBadge.style.fontSize = '0.75rem';
-          rejectedBadge.innerText = 'Đã từ chối';
+          rejectedBadge.style.fontSize = '0.78rem';
+          rejectedBadge.style.marginTop = '8px';
+          rejectedBadge.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Đã từ chối`;
           card.appendChild(rejectedBadge);
         } else {
           const actions = document.createElement('div');
@@ -1193,7 +1536,7 @@ class MusicStudioApp {
 
           const btnAccept = document.createElement('button');
           btnAccept.className = 'btn-chat-action accept';
-          btnAccept.innerHTML = `<i class="fa-solid fa-check"></i> Thêm`;
+          btnAccept.innerHTML = `<i class="fa-solid fa-check"></i> Thêm Vao DAW`;
           btnAccept.onclick = () => this.acceptChatSuggestion(msg, msg.suggestion);
 
           const btnReject = document.createElement('button');
@@ -1237,7 +1580,7 @@ class MusicStudioApp {
       typingBox.id = 'aiTypingIndicator';
       typingBox.className = 'typing-indicator-box';
       typingBox.innerHTML = `
-        <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600;">AI đang suy nghĩ</span>
+        <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600;">AI Copilot đang phối âm</span>
         <div class="typing-dot"></div>
         <div class="typing-dot"></div>
         <div class="typing-dot"></div>
@@ -1250,50 +1593,94 @@ class MusicStudioApp {
   }
 
   previewChatSuggestion(suggestion) {
+    if (!suggestion || !suggestion.suggestedNotes) return;
+    if (window.audioEngine) {
+      window.audioEngine.init();
+    }
+
+    const inst = suggestion.targetInstrument || 'PIANO';
+    const bpm = (this.currentProject && this.currentProject.bpm) ? this.currentProject.bpm : 120;
+    const beatMs = (60 / bpm) * 1000;
+
+    suggestion.suggestedNotes.forEach(note => {
+      setTimeout(() => {
+        if (window.audioEngine) {
+          window.audioEngine.playNote(note.pitch, note.duration || 0.5, inst, 0.9, 0);
+        }
+      }, note.startTime * beatMs);
+    });
+  }
+
+  async acceptChatSuggestion(msg, suggestion) {
     if (!suggestion) return;
+
     const inst = suggestion.targetInstrument || 'PIANO';
 
     if (suggestion.suggestedNotes && suggestion.suggestedNotes.length > 0) {
-      suggestion.suggestedNotes.forEach(note => {
-        setTimeout(() => {
-          window.audioEngine.playNote(note.pitch, note.duration, inst, 0.9, 0);
-        }, note.startTime * 500);
-      });
-    }
-  }
-
-  acceptChatSuggestion(msg, suggestion) {
-    if (!suggestion) return;
-
-    if (suggestion.suggestedNotes && suggestion.suggestedNotes.length > 0) {
-      const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId) || this.currentProject.tracks[0];
-      if (activeTrack) {
-        if (!activeTrack.clips) activeTrack.clips = [];
-        const newClip = {
-          id: Date.now(),
-          name: suggestion.title || 'AI Generated Melody',
-          startTime: 0,
-          duration: 8,
-          clipType: 'NOTE',
-          noteEvents: JSON.parse(JSON.stringify(suggestion.suggestedNotes))
-        };
-        activeTrack.clips.push(newClip);
+      // Find matching instrument track or active track
+      let targetTrack = this.currentProject.tracks.find(t => t.instrument === inst);
+      if (!targetTrack) {
+        targetTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId) || this.currentProject.tracks[0];
       }
+      
+      if (!targetTrack) {
+        targetTrack = {
+          id: Date.now(),
+          name: `${inst} Track`,
+          instrument: inst,
+          volume: 0.8,
+          pan: 0,
+          muted: false,
+          soloed: false,
+          clips: []
+        };
+        this.currentProject.tracks.push(targetTrack);
+      }
+
+      if (!targetTrack.clips) targetTrack.clips = [];
+
+      let maxBeat = 4.0;
+      suggestion.suggestedNotes.forEach(n => {
+        if (n.startTime + n.duration > maxBeat) {
+          maxBeat = Math.ceil(n.startTime + n.duration);
+        }
+      });
+
+      const newClip = {
+        id: Date.now(),
+        name: suggestion.title || `AI ${inst} Clip`,
+        startTime: 0,
+        duration: maxBeat,
+        clipType: 'NOTE',
+        noteEvents: JSON.parse(JSON.stringify(suggestion.suggestedNotes))
+      };
+      targetTrack.clips.push(newClip);
     } else if (suggestion.suggestedTracks && suggestion.suggestedTracks.length > 0) {
       suggestion.suggestedTracks.forEach(tr => {
         this.currentProject.tracks.push(JSON.parse(JSON.stringify(tr)));
       });
     }
 
+    // Call backend accept API if suggestion ID exists
+    if (suggestion.id && typeof suggestion.id === 'number') {
+      const projectId = (this.currentProject && this.currentProject.id) ? this.currentProject.id : 1;
+      fetch(`${this.apiBaseUrl}/projects/${projectId}/ai/suggestions/${suggestion.id}/accept`, {
+        method: 'POST'
+      }).catch(() => {});
+    }
+
     suggestion.status = 'accepted';
     this.renderTracks();
+    if (this.isPianoRollOpen) {
+      this.renderPianoRollGrid();
+    }
     this.renderChatMessages();
 
     // Add confirmation AI response
     this.chatHistory.push({
       id: 'ai-msg-' + Date.now(),
       sender: 'ai',
-      text: `🎉 Đã thêm thành công **"${suggestion.title}"** vào bài hát của bạn! Bạn có thể nhấn **Play ▶️** để nghe giai điệu.`,
+      text: `🎉 Đã thêm thành công **"${suggestion.title}"** vào track **"${inst}"**! Bạn có thể nhấn **Play ▶️** trên DAW để nghe phối âm.`,
       timestamp: this.getCurrentTimeString()
     });
     this.renderChatMessages();
@@ -1349,41 +1736,45 @@ class MusicStudioApp {
     const el = document.getElementById(`lyric${key}`);
     if (!el) return;
 
-    const sampleLines = {
-      verse1: [
-        "\nTừng hạt mưa rơi mang theo bao ký ức quay về,",
-        "\nTrong không gian êm đềm gió khẽ vút qua hàng cây."
-      ],
-      chorus: [
-        "\nHát lên giai điệu tình yêu trong màn đêm,",
-        "\nCho từng nốt nhạc nhẹ trôi thật êm đềm."
-      ],
-      verse2: [
-        "\nBình minh xua tan màn đêm đem ánh sáng lại gần,",
-        "\nLời ca cất lên nhẹ nhàng xoa dịu đi nỗi đau."
-      ]
-    };
-
-    const lines = sampleLines[sectionId] || ["\nGiai điệu nhẹ nhàng đi cùng lời ca êm đềm."];
-    const picked = lines[Math.floor(Math.random() * lines.length)];
-    el.value += picked;
+    const line = this.generateAlgorithmicVietnameseLine(sectionId);
+    el.value = el.value ? el.value + "\n" + line : line;
     this.updateLyricSyllable(sectionId);
 
     // Notify in AI Chat
     this.chatHistory.push({
       id: 'ai-msg-' + Date.now(),
       sender: 'ai',
-      text: `✍️ AI vừa viết tiếp một câu hát cho **${sectionId.toUpperCase()}**: *"<sup>${picked.trim()}</sup>"*`,
+      text: `✍️ AI vừa sáng tác ngẫu hứng câu hát mới cho **${sectionId.toUpperCase()}**: *"<sup>${line}</sup>"*`,
       timestamp: this.getCurrentTimeString()
     });
     this.renderChatMessages();
   }
 
+  generateAlgorithmicVietnameseLine(sectionId) {
+    const openers = ["Đêm nay", "Từng giọt", "Gió khẽ", "Nắng mới", "Lắng nghe", "Góc phố", "Lời ca", "Ký ức", "Tình yêu"];
+    const actions = ["xua tan màn đêm", "rơi nhẹ ngoài hiên", "mang bao hoài niệm", "vút qua không gian", "khẽ xoa dịu đi", "vươn tới tận cùng", "trôi theo dòng thời gian"];
+    const endings = ["thật êm đềm", "ngàn nỗi nhớ", "ngày mai tươi sáng", "không phai mờ", "trong giấc mơ", "vẫn vẹn nguyên"];
+
+    const op = openers[Math.floor(Math.random() * openers.length)];
+    const ac = actions[Math.floor(Math.random() * actions.length)];
+    const ed = endings[Math.floor(Math.random() * endings.length)];
+
+    return `${op} ${ac} ${ed}.`;
+  }
+
   requestAiLyricIdeas() {
+    const themes = [
+      "Cà phê chiều mưa & hoài niệm phố cũ",
+      "Hành trình tuổi trẻ vươn tới tự do",
+      "Gió lạnh đêm đông & nỗi nhớ xa xôi",
+      "Ánh sáng bình minh xua tan u tối"
+    ];
+    const pickedTheme = themes[Math.floor(Math.random() * themes.length)];
+
     this.chatHistory.push({
       id: 'ai-msg-' + Date.now(),
       sender: 'ai',
-      text: `💡 **Gợi Ý Chủ Đề & Concept Lời Bài Hát từ AI**:\n\n1. **Chủ đề Chill & Thư Giãn**: *"Cà phê chiều mưa & những hoài niệm cũ"* (Hợp beat Lofi, Tempo 80-90 BPM).\n2. **Chủ đề Sôi Động & Hy Vọng**: *"Hành trình tuổi trẻ vươn tới những vì sao"* (Hợp beat Synth Pop / Electronic, Tempo 120-128 BPM).\n3. **Chủ đề Sâu Lắng**: *"Góc phố vắng bóng một người"* (Hợp Piano Ballad, Tempo 65-75 BPM).`,
+      text: `💡 **Ý Tưởng & Concept Lời Bài Hát Sáng Tạo từ AI**:\n\n* **Chủ đề vừa tạo**: *"${pickedTheme}"*\n* **Gợi ý phối nhạc**: Kết hợp nốt Piano đệm quãng 8 nhẹ nhàng, dải Bass mềm và nhịp Drums Lofi 85 BPM.\n* Nhấn **"AI Tạo Giai Đệu"** ở góc phần lời để tự động biến câu thơ thành giai điệu!`,
       timestamp: this.getCurrentTimeString()
     });
     this.renderChatMessages();
@@ -1392,7 +1783,11 @@ class MusicStudioApp {
   requestAiChorus() {
     const chorusEl = document.getElementById('lyricChorus');
     if (chorusEl) {
-      chorusEl.value = "Hát lên giai điệu tình yêu trong màn đêm\nCho từng nốt nhạc nhẹ trôi thật êm đềm\nDù ngoài kia bão giông hay nắng ấm ghé qua\nTình yêu chúng ta vẫn mãi không phai mờ...";
+      const line1 = this.generateAlgorithmicVietnameseLine('chorus');
+      const line2 = this.generateAlgorithmicVietnameseLine('chorus');
+      const line3 = this.generateAlgorithmicVietnameseLine('chorus');
+      const line4 = this.generateAlgorithmicVietnameseLine('chorus');
+      chorusEl.value = `${line1}\n${line2}\n${line3}\n${line4}`;
       this.updateLyricSyllable('chorus');
     }
     this.switchWorkspace('lyric');
@@ -1400,10 +1795,174 @@ class MusicStudioApp {
     this.chatHistory.push({
       id: 'ai-msg-' + Date.now(),
       sender: 'ai',
-      text: `✨ AI vừa sáng tác nguyên đoạn **Điệp Khúc (Chorus)** hoàn chỉnh trong Trình Viết Lời cho bạn! Bạn có thể chọn giọng **AI Vocal Nữ Bay Bổng** hoặc **AI Vocal Nam Trầm** để AI Hát Thử nhé!`,
+      text: `✨ AI vừa sáng tác độc bản nguyên đoạn **Điệp Khúc (Chorus 4 câu)** trong Trình Viết Lời cho bạn! Bạn có thể chọn giọng **AI Vocal** để nghe thử nhé!`,
       timestamp: this.getCurrentTimeString()
     });
     this.renderChatMessages();
+  }
+
+  updateLyricKey(newKey) {
+    this.currentProject.musicKey = newKey;
+    const selectKeyHeader = document.getElementById('selectKey');
+    if (selectKeyHeader) selectKeyHeader.value = newKey;
+  }
+
+  detectVietnameseTone(word) {
+    if (!word) return 0;
+    const w = word.toLowerCase();
+    if (/[áắấéếíóốớúứýãẵẫẽễĩõỗỡũữỹ]/.test(w)) return 1; // High (Sắc / Ngã)
+    if (/[àằầèềìòồờùừỳ]/.test(w)) return 2; // Low (Huyền)
+    if (/[ảẳẩẻểỉỏổởủửỷ]/.test(w)) return 3; // Dip (Hỏi)
+    if (/[ạặậẹệịọộợụựỵ]/.test(w)) return 4; // Drop (Nặng)
+    return 0; // Mid (Không dấu)
+  }
+
+  getKeyScalePitches(musicKey) {
+    const key = musicKey || this.currentProject.musicKey || 'C Major';
+    if (key.includes('A Minor')) {
+      return ['A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+    } else if (key.includes('G Major')) {
+      return ['G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F#4', 'G4', 'A4', 'B4'];
+    } else if (key.includes('F Major')) {
+      return ['F3', 'G3', 'A3', 'A#3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4'];
+    } else if (key.includes('D Minor')) {
+      return ['D3', 'E3', 'F3', 'G3', 'A3', 'A#3', 'C4', 'D4', 'E4', 'F4'];
+    } else if (key.includes('E Minor')) {
+      return ['E3', 'F#3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F#4', 'G4'];
+    }
+    return ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5'];
+  }
+
+  async generateMelodyFromLyrics(sectionId) {
+    const key = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+    const el = document.getElementById(`lyric${key}`);
+    const lyricText = el ? el.value.trim() : '';
+
+    if (!lyricText) {
+      alert(`Vui lòng nhập lời cho ${sectionId.toUpperCase()} hoặc bấm "AI Viết Tiếp" trước khi tạo giai điệu!`);
+      return;
+    }
+
+    const musicKey = this.currentProject.musicKey || 'C Major';
+    const keyScale = this.getKeyScalePitches(musicKey);
+    const words = lyricText.split(/\s+/);
+    const notes = [];
+    let currentBeat = 0;
+    let scaleIdx = Math.floor(keyScale.length / 2);
+
+    words.forEach((word, i) => {
+      const tone = this.detectVietnameseTone(word);
+      if (tone === 1) scaleIdx = Math.min(keyScale.length - 1, scaleIdx + 2);
+      else if (tone === 2) scaleIdx = Math.max(0, scaleIdx - 2);
+      else if (tone === 3) scaleIdx = Math.max(0, scaleIdx - 1);
+      else if (tone === 4) scaleIdx = Math.max(0, scaleIdx - 3);
+      else {
+        const step = (i % 2 === 0) ? 0 : (i % 4 === 1 ? 1 : -1);
+        scaleIdx = Math.max(0, Math.min(keyScale.length - 1, scaleIdx + step));
+      }
+
+      const pitch = keyScale[scaleIdx];
+      const duration = (tone === 4) ? 0.5 : (i === words.length - 1 ? 1.5 : 1.0);
+      const velocity = (tone === 1) ? 105 : 90;
+
+      notes.push({
+        word: word,
+        pitch: pitch,
+        startTime: currentBeat,
+        duration: duration,
+        velocity: velocity,
+        tone: tone
+      });
+
+      currentBeat += duration;
+    });
+
+    // Render note badges UI
+    this.renderLyricMelodyBadges(sectionId, notes);
+
+    // Play melody preview
+    notes.forEach(n => {
+      setTimeout(() => {
+        window.audioEngine.playNote(n.pitch, n.duration, this.activeInstrument || 'PIANO', 0.9, 0);
+      }, n.startTime * 450);
+    });
+
+    // Send AI Chat summary
+    this.chatHistory.push({
+      id: 'ai-msg-' + Date.now(),
+      sender: 'ai',
+      text: `🎵 **AI vừa tự làm giai điệu chuẩn tông ${musicKey}** cho **${sectionId.toUpperCase()}** (${notes.length} từ)!\n\n* **Phân tích cao độ**: Đã căn chỉnh nốt nhạc chính xác theo 5 dấu giọng tiếng Việt.\n* **Nghe thử**: Giai điệu đang được phát mẫu bằng nhạc cụ **${this.activeInstrument}**.\n* Nhấn **"Đưa Vào DAW Timeline"** bên dưới phần lời để chèn bài nhạc!`,
+      timestamp: this.getCurrentTimeString()
+    });
+    this.renderChatMessages();
+  }
+
+  generateMelodyFromLyricsFull() {
+    this.switchWorkspace('lyric');
+    this.generateMelodyFromLyrics('verse1');
+    setTimeout(() => this.generateMelodyFromLyrics('chorus'), 1000);
+  }
+
+  renderLyricMelodyBadges(sectionId, notes) {
+    const key = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+    const container = document.getElementById(`melodyBadges${key}`);
+    if (!container) return;
+
+    container.style.display = 'flex';
+    let badgesHtml = `
+      <div class="melody-badges-header">
+        <span><i class="fa-solid fa-music"></i> Dải Nốt Giai Đệu AI (Chuẩn Tông ${this.currentProject.musicKey})</span>
+        <button class="btn-icon-sm" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; font-weight:700;" 
+          onclick="app.insertLyricMelodyToDaw('${sectionId}')">
+          <i class="fa-solid fa-plus"></i> Đưa Vào DAW Timeline
+        </button>
+      </div>
+      <div class="melody-badges-flow">
+    `;
+
+    notes.forEach(n => {
+      let toneClass = 'mid';
+      if (n.tone === 1) toneClass = 'high';
+      else if (n.tone === 2 || n.tone === 4) toneClass = 'low';
+
+      badgesHtml += `
+        <div class="melody-badge-item" title="Từ '${n.word}' -> Nốt ${n.pitch}">
+          <span class="badge-pitch ${toneClass}">${n.pitch}</span>
+          <span class="badge-word">${n.word}</span>
+        </div>
+      `;
+    });
+
+    badgesHtml += `</div>`;
+    container.innerHTML = badgesHtml;
+    this.lastGeneratedSectionNotes = this.lastGeneratedSectionNotes || {};
+    this.lastGeneratedSectionNotes[sectionId] = notes;
+  }
+
+  insertLyricMelodyToDaw(sectionId) {
+    const notes = (this.lastGeneratedSectionNotes && this.lastGeneratedSectionNotes[sectionId]) ? 
+      this.lastGeneratedSectionNotes[sectionId] : null;
+
+    if (!notes || notes.length === 0) {
+      alert('Chưa có giai điệu AI cho đoạn này. Vui lòng bấm "AI Tạo Giai Đệu" trước!');
+      return;
+    }
+
+    let activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId) || this.currentProject.tracks[0];
+    if (activeTrack) {
+      if (!activeTrack.clips) activeTrack.clips = [];
+      const newClip = {
+        id: Date.now(),
+        name: `Giai điệu Lời (${sectionId.toUpperCase()})`,
+        startTime: activeTrack.clips.length * 8,
+        duration: Math.ceil(notes[notes.length - 1].startTime + notes[notes.length - 1].duration),
+        clipType: 'NOTE',
+        noteEvents: JSON.parse(JSON.stringify(notes))
+      };
+      activeTrack.clips.push(newClip);
+      this.renderTracks();
+      alert(`Đã chèn thành công ${notes.length} nốt giai điệu từ lời ca vào Track "${activeTrack.name}" trên DAW!`);
+    }
   }
 
   synthesizeSectionVocal(sectionId) {
@@ -1425,8 +1984,10 @@ class MusicStudioApp {
     window.audioEngine.startPlayback(this.currentProject.bpm, () => {});
     
     // Play Vocal Melodic Harmony Notes simulating AI Vocal singing
-    const vocalPitches = ['C4', 'E4', 'G4', 'C5', 'B4', 'A4', 'G4', 'E4'];
-    vocalPitches.forEach((pitch, i) => {
+    const musicKey = this.currentProject.musicKey || 'C Major';
+    const keyScale = this.getKeyScalePitches(musicKey);
+    
+    keyScale.slice(0, 8).forEach((pitch, i) => {
       setTimeout(() => {
         window.audioEngine.playNote(pitch, 0.8, 'PIANO', 0.95, 0);
       }, i * 400);
@@ -1434,7 +1995,7 @@ class MusicStudioApp {
 
     setTimeout(() => {
       if (statusText) statusText.innerText = `Đã hoàn thành phát Vocal AI cho ${sectionId.toUpperCase()}!`;
-    }, vocalPitches.length * 400 + 500);
+    }, 8 * 400 + 500);
   }
 
   synthesizeFullSongVocal() {

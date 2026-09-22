@@ -20,4 +20,6 @@ public class CreateProjectRequest {
     private Integer bpm = 120;
 
     private String musicKey = "C Major";
+
+    private java.util.List<TrackDTO> tracks;
 }

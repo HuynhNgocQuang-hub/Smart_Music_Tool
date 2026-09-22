@@ -294,16 +294,16 @@ class AudioEngine {
     this.isPlaying = true;
     this.currentBeat = 0;
 
-    const intervalMs = (60 / this.bpm / 2) * 1000;
+    const intervalMs = (60 / this.bpm / 4) * 1000; // 16th note resolution (0.25 beats per tick)
 
     this.timerId = setInterval(() => {
       if (this.onBeatCallback) {
         this.onBeatCallback(this.currentBeat);
       }
-      if (this.metronomeEnabled && this.currentBeat % 2 === 0) {
-        this.playMetronomeClick(this.currentBeat % 8 === 0);
+      if (this.metronomeEnabled && this.currentBeat % 4 === 0) {
+        this.playMetronomeClick(this.currentBeat % 16 === 0);
       }
-      this.currentBeat = (this.currentBeat + 1) % (this.totalBeats * 2);
+      this.currentBeat = (this.currentBeat + 1) % (this.totalBeats * 4);
     }, intervalMs);
   }
 

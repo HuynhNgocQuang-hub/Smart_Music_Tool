@@ -209,22 +209,54 @@
 
         <!-- Bottom Virtual Piano Keyboard -->
         <div class="virtual-keyboard-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">
-              Bàn Phím Nhạc Cụ Ảo (Nhấp chuột hoặc gõ phím A S D F G H J K)
-            </span>
-            <div style="display: flex; gap: 10px; align-items: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">
+                <i class="fa-solid fa-keyboard"></i> Bàn Phím Nhạc Cụ Ảo (A S D F G H J K L ; ' / Z X C V B N M)
+              </span>
+              <span style="font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;">
+                Phím 1-5 chọn nhạc cụ • [ ] đổi Quãng tám
+              </span>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <!-- Octave Shift -->
+              <div class="octave-controls" style="display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--glass-border);">
+                <button class="btn-icon-sm" onclick="app.shiftOctave(-1)" title="Giảm 1 Quãng tám ([)"><i class="fa-solid fa-minus"></i> Oct</button>
+                <span id="octaveShiftLabel" style="font-size: 0.75rem; font-weight: 700; color: #00f2fe; min-width: 65px; text-align: center;">Octave: 0</span>
+                <button class="btn-icon-sm" onclick="app.shiftOctave(1)" title="Tăng 1 Quãng tám (])"><i class="fa-solid fa-plus"></i> Oct</button>
+              </div>
+
+              <!-- Live Record & Quantize -->
+              <button id="btnRecordKeyboard" class="btn-action primary" style="background: linear-gradient(135deg, #ef4444, #dc2626); border: none; font-size: 0.75rem; padding: 4px 10px;" onclick="app.toggleLiveKeyboardRecord()">
+                <i class="fa-solid fa-circle"></i> 🔴 Gõ Phím Thu Âm
+              </button>
+
+              <label style="font-size:0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <input type="checkbox" id="chkAutoQuantize" checked style="accent-color: var(--primary);"> Auto-Quantize (1/8)
+              </label>
+
               <button class="btn-action" style="padding: 4px 10px; font-size: 0.75rem;" onclick="app.openPianoRollModal()">
-                <i class="fa-solid fa-sliders"></i> Trình Soạn Nốt (Piano Roll Grid)
+                <i class="fa-solid fa-sliders"></i> Piano Roll Grid
               </button>
               <span id="activeInstrumentLabel" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">
-                Nhạc cụ đang chọn: Piano
+                Nhạc cụ: Piano
               </span>
             </div>
           </div>
 
-          <div id="pianoKeys" class="piano-keys">
-            <!-- White Keys -->
+          <!-- Extended 2-Octave Keys Container -->
+          <div id="pianoKeys" class="piano-keys extended-keyboard">
+            <!-- Bass Octave 3 White Keys -->
+            <div class="key-white bass" data-note="C3">C3 (Z)</div>
+            <div class="key-white bass" data-note="D3">D3 (X)</div>
+            <div class="key-white bass" data-note="E3">E3 (C)</div>
+            <div class="key-white bass" data-note="F3">F3 (V)</div>
+            <div class="key-white bass" data-note="G3">G3 (B)</div>
+            <div class="key-white bass" data-note="A3">A3 (N)</div>
+            <div class="key-white bass" data-note="B3">B3 (M)</div>
+
+            <!-- Middle Octave 4 White Keys -->
             <div class="key-white" data-note="C4">C4 (A)</div>
             <div class="key-white" data-note="D4">D4 (S)</div>
             <div class="key-white" data-note="E4">E4 (D)</div>
@@ -232,14 +264,25 @@
             <div class="key-white" data-note="G4">G4 (G)</div>
             <div class="key-white" data-note="A4">A4 (H)</div>
             <div class="key-white" data-note="B4">B4 (J)</div>
-            <div class="key-white" data-note="C5">C5 (K)</div>
+
+            <!-- High Octave 5 White Keys -->
+            <div class="key-white high" data-note="C5">C5 (K)</div>
+            <div class="key-white high" data-note="D5">D5 (L)</div>
+            <div class="key-white high" data-note="E5">E5 (;)</div>
+            <div class="key-white high" data-note="F5">F5 (')</div>
 
             <!-- Black Keys -->
-            <div class="key-black" data-note="C#4" style="left: 9.5%;">C#</div>
-            <div class="key-black" data-note="D#4" style="left: 22%;">D#</div>
-            <div class="key-black" data-note="F#4" style="left: 47%;">F#</div>
-            <div class="key-black" data-note="G#4" style="left: 59.5%;">G#</div>
-            <div class="key-black" data-note="A#4" style="left: 72%;">A#</div>
+            <div class="key-black" data-note="C#3" style="left: 4.8%;">C#3</div>
+            <div class="key-black" data-note="D#3" style="left: 11.8%;">D#3</div>
+            <div class="key-black" data-note="F#3" style="left: 25.8%;">F#3</div>
+            <div class="key-black" data-note="G#3" style="left: 32.8%;">G#3</div>
+            <div class="key-black" data-note="A#3" style="left: 39.8%;">A#3</div>
+
+            <div class="key-black" data-note="C#4" style="left: 53.8%;">C#4 (W)</div>
+            <div class="key-black" data-note="D#4" style="left: 60.8%;">D#4 (E)</div>
+            <div class="key-black" data-note="F#4" style="left: 74.8%;">F#4 (T)</div>
+            <div class="key-black" data-note="G#4" style="left: 81.8%;">G#4 (Y)</div>
+            <div class="key-black" data-note="A#4" style="left: 88.8%;">A#4 (U)</div>
           </div>
         </div>
       </section>
@@ -254,10 +297,13 @@
               <span id="lyricProjectTitle" class="lyric-project-name">Viết Lời Bài Hát & Sáng Tạo Vocal AI</span>
             </div>
             <div class="lyric-rhyme-tag">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> AI Rhyme Copilot Active
+              <i class="fa-solid fa-wand-magic-sparkles"></i> AI Melody & Tone Pitch Engine Active
             </div>
           </div>
           <div class="lyric-toolbar-right">
+            <button class="btn-action primary" style="background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; font-weight: 700;" onclick="app.generateMelodyFromLyricsFull()">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> AI Tự Tạo Giai Đệu Từ Lời
+            </button>
             <button class="btn-action primary" onclick="app.requestAiLyricIdeas()">
               <i class="fa-solid fa-lightbulb"></i> Gợi Ý Ý Tưởng Lời
             </button>
@@ -278,6 +324,9 @@
               <div class="lyric-section-header">
                 <span class="section-tag verse">Verse 1 (Đoạn 1)</span>
                 <div class="section-actions">
+                  <button class="btn-icon-sm" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.4);" onclick="app.generateMelodyFromLyrics('verse1')" title="Tự làm giai điệu cho Verse 1">
+                    <i class="fa-solid fa-music"></i> AI Tạo Giai Đệu
+                  </button>
                   <button class="btn-icon-sm" onclick="app.generateNextLyricLine('verse1')" title="AI Viết Tiếp Câu">
                     <i class="fa-solid fa-magic"></i> AI Viết Tiếp
                   </button>
@@ -290,6 +339,10 @@
 Ví dụ:
 Đêm nay mưa rơi nhẹ rơi ngoài hiên vắng
 Tiếng đàn vang lên xua tan đi khoảng trống..."></textarea>
+              
+              <!-- Generated Note Sheet Badges -->
+              <div id="melodyBadgesVerse1" class="lyric-melody-container" style="display: none;"></div>
+
               <div class="lyric-footer-info">
                 <span id="syllableVerse1">Syllable count: 16 từ</span>
                 <span class="rhyme-hint">Vần gợi ý: <em>vắng - trống - ngóng - mộng</em></span>
@@ -301,6 +354,9 @@ Tiếng đàn vang lên xua tan đi khoảng trống..."></textarea>
               <div class="lyric-section-header">
                 <span class="section-tag chorus">Chorus (Điệp Khúc)</span>
                 <div class="section-actions">
+                  <button class="btn-icon-sm" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.4);" onclick="app.generateMelodyFromLyrics('chorus')" title="Tự làm giai điệu cho Điệp khúc">
+                    <i class="fa-solid fa-music"></i> AI Tạo Giai Đệu
+                  </button>
                   <button class="btn-icon-sm" onclick="app.generateNextLyricLine('chorus')" title="AI Viết Tiếp Chorus">
                     <i class="fa-solid fa-magic"></i> AI Sáng Tạo
                   </button>
@@ -313,6 +369,10 @@ Tiếng đàn vang lên xua tan đi khoảng trống..."></textarea>
 Ví dụ:
 Hát lên giai điệu tình yêu trong màn đêm
 Cho từng nốt nhạc nhẹ trôi thật êm đềm..."></textarea>
+
+              <!-- Generated Note Sheet Badges -->
+              <div id="melodyBadgesChorus" class="lyric-melody-container" style="display: none;"></div>
+
               <div class="lyric-footer-info">
                 <span id="syllableChorus">Syllable count: 18 từ</span>
                 <span class="rhyme-hint">Vần gợi ý: <em>đêm - êm - thêm - mềm</em></span>
@@ -324,6 +384,9 @@ Cho từng nốt nhạc nhẹ trôi thật êm đềm..."></textarea>
               <div class="lyric-section-header">
                 <span class="section-tag verse">Verse 2 (Đoạn 2)</span>
                 <div class="section-actions">
+                  <button class="btn-icon-sm" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.4);" onclick="app.generateMelodyFromLyrics('verse2')" title="Tự làm giai điệu cho Verse 2">
+                    <i class="fa-solid fa-music"></i> AI Tạo Giai Đệu
+                  </button>
                   <button class="btn-icon-sm" onclick="app.generateNextLyricLine('verse2')" title="AI Viết Tiếp">
                     <i class="fa-solid fa-magic"></i> AI Viết Tiếp
                   </button>
@@ -333,6 +396,9 @@ Cho từng nốt nhạc nhẹ trôi thật êm đềm..."></textarea>
                 </div>
               </div>
               <textarea id="lyricVerse2" class="lyric-textarea" oninput="app.updateLyricSyllable('verse2')" placeholder="Nhập lời đoạn 2..."></textarea>
+              
+              <!-- Generated Note Sheet Badges -->
+              <div id="melodyBadgesVerse2" class="lyric-melody-container" style="display: none;"></div>
             </div>
 
           </div>
@@ -379,11 +445,22 @@ Cho từng nốt nhạc nhẹ trôi thật êm đềm..."></textarea>
               </div>
             </div>
 
-            <!-- Voice Controls -->
+            <!-- Voice Controls & Pitch Tuning -->
             <div class="vocal-controls-card">
               <div class="vocal-control-row">
-                <span class="control-label">Tự Động Chỉnh Cao Độ (Auto-Tune)</span>
-                <input type="range" min="0" max="100" value="80" style="accent-color: var(--primary);">
+                <span class="control-label">Tông Âm Gia Âm Nhạc (Song Key)</span>
+                <select id="selectLyricKey" class="key-selector" style="font-size: 0.75rem; padding: 4px 8px;" onchange="app.updateLyricKey(this.value)">
+                  <option value="C Major">C Major (Đô Trưởng)</option>
+                  <option value="A Minor">A Minor (La Thứ)</option>
+                  <option value="G Major">G Major (Sol Trưởng)</option>
+                  <option value="F Major">F Major (Fa Trưởng)</option>
+                  <option value="D Minor">D Minor (Rê Thứ)</option>
+                  <option value="E Minor">E Minor (Mi Thứ)</option>
+                </select>
+              </div>
+              <div class="vocal-control-row">
+                <span class="control-label">Tự Động Chuẩn Cao Độ (Auto-Tune Pitch)</span>
+                <input type="range" id="inputAutoTuneLevel" min="0" max="100" value="90" style="accent-color: var(--primary);">
               </div>
               <div class="vocal-control-row">
                 <span class="control-label">Độ Vang Vocal (Reverb Space)</span>
@@ -432,22 +509,25 @@ Cho từng nốt nhạc nhẹ trôi thật êm đềm..."></textarea>
 
         <!-- Quick Prompt Chips -->
         <div class="quick-chips-wrapper">
-          <button class="quick-chip" onclick="app.sendQuickChip('Viết tiếp giai điệu ngắn')">
+          <button class="quick-chip" onclick="app.requestAiContinuation()">
             <i class="fa-solid fa-arrow-trend-up"></i> Viết tiếp giai điệu
           </button>
-          <button class="quick-chip" onclick="app.sendQuickChip('Phối khí Bass + Drums')">
+          <button class="quick-chip" onclick="app.requestAiBuildAround()">
             <i class="fa-solid fa-layer-group"></i> Phối khí (Bass+Drums)
           </button>
-          <button class="quick-chip" onclick="app.sendQuickChip('Tạo bè hòa âm 3rd')">
+          <button class="quick-chip" onclick="app.requestAiArrangement()">
+            <i class="fa-solid fa-sliders"></i> Bố cục bài hát
+          </button>
+          <button class="quick-chip" onclick="app.requestAiHarmony()">
             <i class="fa-solid fa-music"></i> Hòa âm 3rd
           </button>
-          <button class="quick-chip" onclick="app.sendQuickChip('Tạo nhịp trống Lofi chill')">
-            <i class="fa-solid fa-drum"></i> Trống Lofi
+          <button class="quick-chip" onclick="app.requestAiRecommendation()">
+            <i class="fa-solid fa-guitar"></i> Đề xuất nhạc cụ
           </button>
-          <button class="quick-chip" onclick="app.sendQuickChip('Làm cho bài hát vui tươi hơn')">
+          <button class="quick-chip" onclick="app.requestMoodVariation('happier')">
             😊 Vui tươi hơn
           </button>
-          <button class="quick-chip" onclick="app.sendQuickChip('Chuyển bài hát sang sầu lắng')">
+          <button class="quick-chip" onclick="app.requestMoodVariation('sadder')">
             😢 Sâu lắng hơn
           </button>
         </div>

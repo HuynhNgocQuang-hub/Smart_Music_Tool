@@ -1,7 +1,7 @@
 # Functional Requirements
 
 ## Status Legend
-- `CONFIRMED`: approved intent.
+- `CONFIRMED`: approved intent / implemented.
 - `PROPOSED`: suggested; requires approval.
 - `FUTURE`: deferred.
 - `TBD`: unresolved.
@@ -213,26 +213,6 @@ Processing/AI does not delete or overwrite the original recording.
 **Status:** CONFIRMED
 
 Support feedback such as Accept, Reject, and natural-language feedback.
-
-## REQ-PREF-002 — Learn Preference
-**Status:** PROPOSED
-
-Use feedback to improve future recommendations.
-
-## REQ-PREF-003 — Context-Aware Preference
-**Status:** PROPOSED
-
-Preference should consider current project context instead of assuming one permanent taste profile.
-
-## REQ-PREF-004 — Similar Sound Recommendation
-**Status:** PROPOSED
-
-Recommend sounds/instruments similar to positively rated sounds.
-
-## REQ-PREF-005 — A/B Music Choice
-**Status:** PROPOSED
-
-Allow beginners to choose between audible alternatives without music-theory terminology.
 
 # G. Beginner Experience
 

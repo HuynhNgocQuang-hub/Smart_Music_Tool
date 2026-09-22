@@ -472,6 +472,83 @@ body {
   font-weight: 700;
 }
 
+/* AI Generated Lyric Melody Pitch Badges */
+.lyric-melody-container {
+  background: rgba(0, 242, 254, 0.04);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.melody-badges-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #00F2FE;
+}
+
+.melody-badges-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.melody-badge-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(18, 22, 38, 0.85);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  min-width: 36px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.melody-badge-item:hover {
+  transform: translateY(-2px);
+  border-color: #00F2FE;
+}
+
+.badge-pitch {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  width: 100%;
+  text-align: center;
+}
+.badge-pitch.high {
+  background: linear-gradient(135deg, #00f2fe, #4facfe);
+  color: #000;
+}
+.badge-pitch.low {
+  background: linear-gradient(135deg, #a855f7, #7f53ac);
+  color: #fff;
+}
+.badge-pitch.mid {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.badge-word {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Vocal Studio Panel */
 .vocal-studio-panel {
   flex: 0.9;
@@ -1403,3 +1480,143 @@ body {
   gap: 12px;
   justify-content: flex-end;
 }
+
+/* Virtual Keyboard Extended 2-Octave Panel */
+.virtual-keyboard-panel {
+  background: rgba(10, 13, 26, 0.95);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.piano-keys.extended-keyboard {
+  position: relative;
+  height: 90px;
+  display: flex;
+  background: #090B14;
+  border-radius: 8px;
+  padding: 4px;
+  border: 1px solid var(--glass-border);
+  overflow-x: auto;
+  user-select: none;
+}
+
+.key-white {
+  flex: 1;
+  min-width: 32px;
+  background: linear-gradient(to bottom, #ffffff 0%, #e0e0e0 100%);
+  color: #111;
+  border-radius: 0 0 5px 5px;
+  margin: 0 1px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: inset 0 -2px 5px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3);
+  transition: background 0.1s ease, transform 0.1s ease;
+  z-index: 1;
+}
+
+.key-white.bass {
+  background: linear-gradient(to bottom, #f0f4f8 0%, #cbd5e1 100%);
+  color: #1e293b;
+}
+
+.key-white.high {
+  background: linear-gradient(to bottom, #ffffff 0%, #bae6fd 100%);
+}
+
+.key-white:hover, .key-white.active {
+  background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%) !important;
+  color: #000 !important;
+  box-shadow: 0 0 12px #00f2fe;
+  transform: translateY(2px);
+}
+
+.key-black {
+  position: absolute;
+  top: 4px;
+  width: 22px;
+  height: 52px;
+  background: linear-gradient(to bottom, #1e293b 0%, #090b14 100%);
+  color: #fff;
+  border-radius: 0 0 4px 4px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: background 0.1s ease, transform 0.1s ease;
+}
+
+.key-black:hover, .key-black.active {
+  background: linear-gradient(to bottom, #a855f7 0%, #7f53ac 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px #a855f7;
+  transform: translateY(2px);
+}
+
+.recording-pulse {
+  animation: recPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes recPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 12px #ef4444; }
+  50% { opacity: 0.5; box-shadow: 0 0 2px #ef4444; }
+}
+
+/* ── Delete Track Button ────────────────────────────────────── */
+.btn-track-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.7);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.track-header:hover .btn-track-delete {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.btn-track-delete:hover {
+  background: rgba(239, 68, 68, 0.85);
+  color: #fff;
+  border-color: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  transform: scale(1.1);
+}
+
+.btn-track-delete:active {
+  transform: scale(0.95);
+}
+
+/* ── Toast warning variant ──────────────────────────────────── */
+.toast.warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(239, 68, 68, 0.9));
+  border-left: 3px solid #ef4444;
+}
+

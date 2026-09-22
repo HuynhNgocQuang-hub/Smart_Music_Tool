@@ -47,9 +47,10 @@ public class TrackService {
     }
 
     @Transactional
-    public TrackDTO updateTrack(Long trackId, TrackDTO trackDTO) {
+    public TrackDTO updateTrack(Long projectId, Long trackId, TrackDTO trackDTO) {
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new ResourceNotFoundException("Track not found: " + trackId));
+        validateTrackBelongsToProject(track, projectId);
 
         if (trackDTO.getName() != null) track.setName(trackDTO.getName());
         if (trackDTO.getInstrument() != null) track.setInstrument(trackDTO.getInstrument());
@@ -63,17 +64,18 @@ public class TrackService {
     }
 
     @Transactional
-    public void deleteTrack(Long trackId) {
-        if (!trackRepository.existsById(trackId)) {
-            throw new ResourceNotFoundException("Track not found: " + trackId);
-        }
+    public void deleteTrack(Long projectId, Long trackId) {
+        Track track = trackRepository.findById(trackId)
+                .orElseThrow(() -> new ResourceNotFoundException("Track not found: " + trackId));
+        validateTrackBelongsToProject(track, projectId);
         trackRepository.deleteById(trackId);
     }
 
     @Transactional
-    public TrackDTO addClipToTrack(Long trackId, ClipDTO clipDTO) {
+    public TrackDTO addClipToTrack(Long projectId, Long trackId, ClipDTO clipDTO) {
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new ResourceNotFoundException("Track not found: " + trackId));
+        validateTrackBelongsToProject(track, projectId);
 
         Clip clip = Clip.builder()
                 .track(track)
@@ -105,6 +107,12 @@ public class TrackService {
 
         Track saved = trackRepository.save(track);
         return mapTrackToDTO(saved);
+    }
+
+    private void validateTrackBelongsToProject(Track track, Long projectId) {
+        if (projectId != null && (track.getProject() == null || !track.getProject().getId().equals(projectId))) {
+            throw new ResourceNotFoundException("Track " + track.getId() + " does not belong to project " + projectId);
+        }
     }
 
     private TrackDTO mapTrackToDTO(Track track) {

@@ -144,23 +144,32 @@ class PitchTracker {
     return noteName + octave;
   }
 
-  processExtractedNotes(rawNotes) {
+  processExtractedNotes(rawNotes, bpm = 120) {
     if (!rawNotes || rawNotes.length === 0) return [];
+    const secondsPerBeat = 60 / bpm;
+    const firstTime = rawNotes[0].timestamp || 0;
     const result = [];
     let currentNote = null;
 
     for (let i = 0; i < rawNotes.length; i++) {
       let n = rawNotes[i];
+      let beatTime = Math.max(0, (n.timestamp - firstTime) / secondsPerBeat);
+      beatTime = Math.round(beatTime * 4) / 4; // Quantize start to 1/16th note (0.25 beats)
+
       if (!currentNote) {
-        currentNote = { pitch: n.pitch, startTime: i * 0.25, duration: 0.25, velocity: 100 };
+        currentNote = { pitch: n.pitch, startTime: beatTime, duration: 0.25, velocity: 100 };
       } else if (currentNote.pitch === n.pitch) {
-        currentNote.duration += 0.25;
+        currentNote.duration += 0.125;
       } else {
+        currentNote.duration = Math.max(0.25, Math.round(currentNote.duration * 4) / 4);
         result.push(currentNote);
-        currentNote = { pitch: n.pitch, startTime: i * 0.25, duration: 0.25, velocity: 100 };
+        currentNote = { pitch: n.pitch, startTime: beatTime, duration: 0.25, velocity: 100 };
       }
     }
-    if (currentNote) result.push(currentNote);
+    if (currentNote) {
+      currentNote.duration = Math.max(0.25, Math.round(currentNote.duration * 4) / 4);
+      result.push(currentNote);
+    }
     return result;
   }
 }

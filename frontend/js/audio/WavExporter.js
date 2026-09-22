@@ -18,11 +18,22 @@ class WavExporter {
     const secondsPerBeat = 60 / bpm;
 
     if (project && project.tracks) {
+      const hasSolo = project.tracks.some(t => t.solo);
       project.tracks.forEach(track => {
         if (track.muted) return;
+        if (hasSolo && !track.solo) return;
+
         const trackGain = offlineCtx.createGain();
         trackGain.gain.value = (track.volume / 100);
-        trackGain.connect(masterGain);
+
+        const panner = offlineCtx.createStereoPanner ? offlineCtx.createStereoPanner() : null;
+        if (panner) {
+          panner.pan.value = Math.max(-1, Math.min(1, (track.pan || 0) / 50));
+          trackGain.connect(panner);
+          panner.connect(masterGain);
+        } else {
+          trackGain.connect(masterGain);
+        }
 
         if (track.clips) {
           track.clips.forEach(clip => {
@@ -54,21 +65,83 @@ class WavExporter {
 
   static renderNoteOffline(ctx, pitch, startTime, duration, instrument, destination) {
     const freq = window.audioEngine ? window.audioEngine.pitchFrequencyMap[pitch] || 440 : 440;
-    const osc = ctx.createOscillator();
     const noteGain = ctx.createGain();
-
-    osc.type = (instrument === 'BASS' || instrument === 'SYNTH') ? 'sawtooth' : 'triangle';
-    osc.frequency.setValueAtTime(freq, startTime);
-
     noteGain.gain.setValueAtTime(0.001, startTime);
+
+    const inst = (instrument || 'PIANO').toUpperCase();
+    if (inst === 'DRUMS') {
+      const osc = ctx.createOscillator();
+      if (pitch === 'C2' || pitch === 'KICK') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, startTime);
+        osc.frequency.exponentialRampToValueAtTime(30, startTime + 0.15);
+        noteGain.gain.setValueAtTime(0.9, startTime);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+        osc.connect(noteGain);
+        osc.start(startTime);
+        osc.stop(startTime + 0.22);
+      } else if (pitch === 'D2' || pitch === 'SNARE') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(250, startTime);
+        noteGain.gain.setValueAtTime(0.8, startTime);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
+        osc.connect(noteGain);
+        osc.start(startTime);
+        osc.stop(startTime + 0.18);
+      } else {
+        const bufferSize = ctx.sampleRate * 0.08;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 7000;
+        noise.connect(filter);
+        filter.connect(noteGain);
+        noteGain.gain.setValueAtTime(0.5, startTime);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+        noise.start(startTime);
+        noise.stop(startTime + 0.09);
+      }
+      noteGain.connect(destination);
+      return;
+    }
+
+    const osc = ctx.createOscillator();
+    if (inst === 'SYNTH') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, startTime);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2000, startTime);
+      osc.connect(filter);
+      filter.connect(noteGain);
+    } else if (inst === 'BASS') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq / 2, startTime);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(450, startTime);
+      osc.connect(filter);
+      filter.connect(noteGain);
+    } else if (inst === 'STRINGS') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, startTime);
+      osc.connect(noteGain);
+    } else { // PIANO / GUITAR
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, startTime);
+      osc.connect(noteGain);
+    }
+
     noteGain.gain.linearRampToValueAtTime(0.7, startTime + 0.02);
-    noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration + 0.2);
 
-    osc.connect(noteGain);
     noteGain.connect(destination);
-
     osc.start(startTime);
-    osc.stop(startTime + duration + 0.1);
+    osc.stop(startTime + duration + 0.25);
   }
 
   static bufferToWav(buffer) {

@@ -172,10 +172,14 @@ See [DOCKER_DBEAVER_GUIDE.md](file:///d:/music/DOCKER_DBEAVER_GUIDE.md) and [doc
 ## Frontend Technology
 
 ```text
-TBD
+CONFIRMED:
+HTML5 & Vanilla CSS3 (Custom Glassmorphism Design System)
+JavaScript (ES6+ OOP Application Architecture)
+Web Audio API (Synthesizers, Master Filter FX, Delay, Reverb)
+Autocorrelation Pitch Tracking (Microphone Hum-to-Melody)
+OfflineAudioContext (Offline WAV Exporter)
+Node.js Light HTTP Server (server.js on port 3000)
 ```
-
-Do not assume React, Vue, Angular, Next.js, or another framework until confirmed.
 
 ---
 

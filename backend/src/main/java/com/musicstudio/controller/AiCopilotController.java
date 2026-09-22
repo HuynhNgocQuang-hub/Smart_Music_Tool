@@ -21,6 +21,13 @@ public class AiCopilotController {
         return ResponseEntity.ok(aiCopilotService.processNaturalLanguagePrompt(projectId, request));
     }
 
+    @PostMapping("/lyrics-to-melody")
+    public ResponseEntity<AiSuggestionResponse> generateMelodyFromLyrics(
+            @PathVariable Long projectId,
+            @RequestBody AiMelodyRequest request) {
+        return ResponseEntity.ok(aiCopilotService.generateMelodyFromLyrics(projectId, request));
+    }
+
     @PostMapping("/harmony")
     public ResponseEntity<AiSuggestionResponse> generateHarmony(
             @PathVariable Long projectId,

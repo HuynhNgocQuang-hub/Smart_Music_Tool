@@ -106,4 +106,27 @@ class AiCopilotServiceTest {
         assertNotNull(response);
         assertEquals("ACCEPTED", response.getStatus());
     }
+
+    @Test
+    @DisplayName("Generate Melody from Lyrics should parse Vietnamese tone and produce pitch-aligned notes")
+    void testGenerateMelodyFromLyrics() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(sampleProject));
+        when(aiSuggestionRepository.save(any(AiSuggestion.class))).thenAnswer(i -> {
+            AiSuggestion s = i.getArgument(0);
+            s.setId(12L);
+            return s;
+        });
+
+        AiMelodyRequest request = new AiMelodyRequest();
+        request.setLyrics("Đêm nay mưa rơi nhẹ rơi ngoài hiên vắng\nLời ca cất lên nhẹ nhàng xoa dịu đi nỗi đau");
+        request.setMusicKey("C Major");
+        request.setInstrument("PIANO");
+
+        AiSuggestionResponse response = aiCopilotService.generateMelodyFromLyrics(1L, request);
+
+        assertNotNull(response);
+        assertEquals("LYRICS_TO_MELODY", response.getSuggestionType());
+        assertNotNull(response.getSuggestedNotes());
+        assertTrue(response.getSuggestedNotes().size() >= 10);
+    }
 }

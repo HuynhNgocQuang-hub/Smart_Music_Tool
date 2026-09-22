@@ -97,10 +97,60 @@ public class ProjectService {
         MusicProject project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
 
-        project.setName(request.getName());
+        if (request.getName() != null && !request.getName().isBlank()) {
+            project.setName(request.getName());
+        }
         if (request.getDescription() != null) project.setDescription(request.getDescription());
         if (request.getBpm() != null) project.setBpm(request.getBpm());
         if (request.getMusicKey() != null) project.setMusicKey(request.getMusicKey());
+
+        if (request.getTracks() != null) {
+            project.getTracks().clear();
+            int order = 0;
+            for (TrackDTO trackDTO : request.getTracks()) {
+                Track track = Track.builder()
+                        .project(project)
+                        .name(trackDTO.getName() != null ? trackDTO.getName() : "Track " + (order + 1))
+                        .instrument(trackDTO.getInstrument() != null ? trackDTO.getInstrument() : "PIANO")
+                        .volume(trackDTO.getVolume() != null ? trackDTO.getVolume() : 80)
+                        .pan(trackDTO.getPan() != null ? trackDTO.getPan() : 0)
+                        .muted(trackDTO.getMuted() != null ? trackDTO.getMuted() : false)
+                        .solo(trackDTO.getSolo() != null ? trackDTO.getSolo() : false)
+                        .trackOrder(trackDTO.getTrackOrder() != null ? trackDTO.getTrackOrder() : order++)
+                        .build();
+
+                if (trackDTO.getClips() != null) {
+                    List<Clip> clips = new ArrayList<>();
+                    for (ClipDTO clipDTO : trackDTO.getClips()) {
+                        Clip clip = Clip.builder()
+                                .track(track)
+                                .name(clipDTO.getName() != null ? clipDTO.getName() : "Clip")
+                                .startTime(clipDTO.getStartTime() != null ? clipDTO.getStartTime() : 0.0)
+                                .duration(clipDTO.getDuration() != null ? clipDTO.getDuration() : 8.0)
+                                .clipType(clipDTO.getClipType() != null ? clipDTO.getClipType() : "NOTE")
+                                .audioAssetUrl(clipDTO.getAudioAssetUrl())
+                                .build();
+
+                        if (clipDTO.getNoteEvents() != null) {
+                            List<NoteEvent> notes = new ArrayList<>();
+                            for (NoteEventDTO noteDTO : clipDTO.getNoteEvents()) {
+                                notes.add(NoteEvent.builder()
+                                        .clip(clip)
+                                        .pitch(noteDTO.getPitch())
+                                        .startTime(noteDTO.getStartTime())
+                                        .duration(noteDTO.getDuration())
+                                        .velocity(noteDTO.getVelocity() != null ? noteDTO.getVelocity() : 100)
+                                        .build());
+                            }
+                            clip.setNoteEvents(notes);
+                        }
+                        clips.add(clip);
+                    }
+                    track.setClips(clips);
+                }
+                project.getTracks().add(track);
+            }
+        }
 
         MusicProject saved = projectRepository.save(project);
         return mapToResponse(saved);

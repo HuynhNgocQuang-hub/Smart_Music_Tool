@@ -28,14 +28,14 @@ public class TrackController {
             @PathVariable Long projectId,
             @PathVariable Long trackId,
             @RequestBody TrackDTO trackDTO) {
-        return ResponseEntity.ok(trackService.updateTrack(trackId, trackDTO));
+        return ResponseEntity.ok(trackService.updateTrack(projectId, trackId, trackDTO));
     }
 
     @DeleteMapping("/{trackId}")
     public ResponseEntity<Void> deleteTrack(
             @PathVariable Long projectId,
             @PathVariable Long trackId) {
-        trackService.deleteTrack(trackId);
+        trackService.deleteTrack(projectId, trackId);
         return ResponseEntity.noContent().build();
     }
 
@@ -45,6 +45,6 @@ public class TrackController {
             @PathVariable Long trackId,
             @RequestBody ClipDTO clipDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(trackService.addClipToTrack(trackId, clipDTO));
+                .body(trackService.addClipToTrack(projectId, trackId, clipDTO));
     }
 }
