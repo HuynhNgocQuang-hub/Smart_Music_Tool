@@ -116,8 +116,9 @@ public class ProjectService {
                         .pan(trackDTO.getPan() != null ? trackDTO.getPan() : 0)
                         .muted(trackDTO.getMuted() != null ? trackDTO.getMuted() : false)
                         .solo(trackDTO.getSolo() != null ? trackDTO.getSolo() : false)
-                        .trackOrder(trackDTO.getTrackOrder() != null ? trackDTO.getTrackOrder() : order++)
+                        .trackOrder(trackDTO.getTrackOrder() != null ? trackDTO.getTrackOrder() : order)
                         .build();
+                order++;
 
                 if (trackDTO.getClips() != null) {
                     List<Clip> clips = new ArrayList<>();

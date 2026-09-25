@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.musicstudio.dto.*;
 import com.musicstudio.entity.AiSuggestion;
 import com.musicstudio.entity.MusicProject;
+import com.musicstudio.entity.Track;
+import com.musicstudio.entity.Clip;
+import com.musicstudio.entity.NoteEvent;
 import com.musicstudio.exception.ResourceNotFoundException;
 import com.musicstudio.repository.AiSuggestionRepository;
 import com.musicstudio.repository.ProjectRepository;
@@ -55,8 +58,8 @@ public class AiCopilotService {
                         "GEMINI_PRODUCER",
                         geminiResult.getTargetInstrument() != null ? geminiResult.getTargetInstrument() : initialInstrument,
                         geminiResult.getExplanation(),
-                        null,
-                        geminiResult.getNotes()
+                        geminiResult.getNotes(),
+                        null
                 );
             }
         }
@@ -64,6 +67,17 @@ public class AiCopilotService {
         List<NoteEventDTO> generatedNotes = new ArrayList<>();
         List<TrackDTO> generatedTracks = new ArrayList<>();
 
+        // Intent 0: General Greeting & Copilot Capabilities Inquiry
+        if (prompt.contains("giúp") || prompt.contains("chào") || prompt.contains("là ai") || 
+            prompt.contains("hướng dẫn") || prompt.contains("bạn có thể") || prompt.contains("là gì")) {
+            String explanation = "🤖 **Xin chào! Tôi là AI Music Copilot — Trợ lý Producer âm nhạc của bạn.**\n\n" +
+                    "Tôi có thể hỗ trợ bạn các công việc sản xuất âm nhạc sau:\n\n" +
+                    "* 🎵 **Sáng tạo giai điệu & Hợp âm**: Tạo giai điệu Piano, Drums, Bass, Synth, Guitar, Strings theo nhiều âm giai (Lofi, Jazz, Minor, EDM...)\n" +
+                    "* ✍️ **Sáng tác lời ca & Gieo vần**: Gợi ý lời hát, gieo vần chân/vần lưng và phát triển cấu trúc bài hát (Verse/Chorus/Bridge)\n" +
+                    "* 🎛️ **Tư vấn phối khí & Mixer**: Đề xuất cân bằng dải tần âm thanh và thông số hiệu ứng sound.\n\n" +
+                    "💡 *Bạn hãy thử gõ: \"Tạo giai điệu Piano buồn\", \"Viết nhịp Drum Lofi 85 BPM\", hoặc \"Gợi ý lời ca cho Verse 1\" nhé!*";
+            return saveAiSuggestion(projectId, "GENERAL_ASSISTANCE", "COPILOT", explanation, null, null);
+        }
 
         // Intent 1: Lyric & Songwriting Assistance
         if (prompt.contains("lời") || prompt.contains("vần") || prompt.contains("sáng tác") || prompt.contains("ý tưởng")) {
@@ -508,32 +522,47 @@ public class AiCopilotService {
                         }
                         projectRepository.save(project);
                     } else if (payload.getSuggestedNotes() != null && !payload.getSuggestedNotes().isEmpty()) {
-                        if (!project.getTracks().isEmpty()) {
-                            Track track = project.getTracks().get(0);
-                            Clip clip = track.getClips() != null && !track.getClips().isEmpty() ? track.getClips().get(0) : null;
-                            if (clip == null) {
-                                clip = Clip.builder()
-                                        .track(track)
-                                        .name("AI Melody Clip")
-                                        .startTime(0.0)
-                                        .duration(8.0)
-                                        .clipType("NOTE")
-                                        .build();
-                                if (track.getClips() == null) track.setClips(new ArrayList<>());
-                                track.getClips().add(clip);
-                            }
-                            if (clip.getNoteEvents() == null) clip.setNoteEvents(new ArrayList<>());
-                            for (NoteEventDTO nDto : payload.getSuggestedNotes()) {
-                                clip.getNoteEvents().add(NoteEvent.builder()
-                                        .clip(clip)
-                                        .pitch(nDto.getPitch())
-                                        .startTime(nDto.getStartTime())
-                                        .duration(nDto.getDuration())
-                                        .velocity(nDto.getVelocity() != null ? nDto.getVelocity() : 100)
-                                        .build());
-                            }
-                            projectRepository.save(project);
+                        if (project.getTracks() == null) {
+                            project.setTracks(new ArrayList<>());
                         }
+                        if (project.getTracks().isEmpty()) {
+                            Track defaultTrack = Track.builder()
+                                    .project(project)
+                                    .name("Grand Piano")
+                                    .instrument("PIANO")
+                                    .volume(85)
+                                    .pan(0)
+                                    .muted(false)
+                                    .solo(false)
+                                    .trackOrder(0)
+                                    .clips(new ArrayList<>())
+                                    .build();
+                            project.getTracks().add(defaultTrack);
+                        }
+                        Track track = project.getTracks().get(0);
+                        Clip clip = track.getClips() != null && !track.getClips().isEmpty() ? track.getClips().get(0) : null;
+                        if (clip == null) {
+                            clip = Clip.builder()
+                                    .track(track)
+                                    .name("AI Melody Clip")
+                                    .startTime(0.0)
+                                    .duration(8.0)
+                                    .clipType("NOTE")
+                                    .build();
+                            if (track.getClips() == null) track.setClips(new ArrayList<>());
+                            track.getClips().add(clip);
+                        }
+                        if (clip.getNoteEvents() == null) clip.setNoteEvents(new ArrayList<>());
+                        for (NoteEventDTO nDto : payload.getSuggestedNotes()) {
+                            clip.getNoteEvents().add(NoteEvent.builder()
+                                    .clip(clip)
+                                    .pitch(nDto.getPitch())
+                                    .startTime(nDto.getStartTime())
+                                    .duration(nDto.getDuration())
+                                    .velocity(nDto.getVelocity() != null ? nDto.getVelocity() : 100)
+                                    .build());
+                        }
+                        projectRepository.save(project);
                     }
                 }
             } catch (Exception e) {
@@ -549,6 +578,30 @@ public class AiCopilotService {
                 .status(saved.getStatus())
                 .createdAt(saved.getCreatedAt())
                 .build();
+    }
+
+    @Transactional
+    public AiSuggestionResponse generateMelodyFromLyrics(Long projectId, AiMelodyRequest request) {
+        return processNaturalLanguagePrompt(projectId, request);
+    }
+
+    private String[] getKeyScalePitches(String key) {
+        if (key != null && (key.toLowerCase().contains("minor") || key.toLowerCase().contains("m"))) {
+            return MINOR_SCALE;
+        }
+        return MAJOR_SCALE;
+    }
+
+    private String getDiatonicHarmonyPitch(String pitch, String[] scale, int interval) {
+        if (pitch == null || scale == null || scale.length == 0) return "E4";
+        int idx = 0;
+        for (int i = 0; i < scale.length; i++) {
+            if (scale[i].equalsIgnoreCase(pitch)) {
+                idx = i;
+                break;
+            }
+        }
+        return scale[(idx + interval) % scale.length];
     }
 
     private AiSuggestionResponse saveAiSuggestion(Long projectId, String type, String instrument, String explanation, List<NoteEventDTO> notes, List<TrackDTO> tracks) {

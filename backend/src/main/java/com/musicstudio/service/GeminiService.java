@@ -54,18 +54,19 @@ public class GeminiService {
 
         try {
             String systemPrompt = String.format(
-                "Bạn là AI Music Producer & Songwriter đẳng cấp của ứng dụng AURA Music Studio.\n" +
+                "Bạn là AI Music Producer & Songwriter chuyên nghiệp trên ứng dụng AURA Music Studio.\n" +
                 "Phân tích ngữ cảnh dự án âm nhạc:\n" +
                 "- Tông nhạc (Key): %s\n" +
                 "- Tốc độ nhịp (BPM): %d\n" +
                 "- Nhạc cụ mục tiêu: %s\n" +
                 "- Đề xuất của người dùng: \"%s\"\n\n" +
                 "Nhiệm vụ:\n" +
-                "1. Trả lời sắc sảo bằng tiếng Việt chuẩn vai trò Producer âm nhạc chuyên nghiệp.\n" +
-                "2. Nếu là tư vấn lời ca/gieo vần, hãy viết câu lời hát có vần điệu hay, nhịp điệu phù hợp.\n" +
-                "3. Trả về kết quả JSON duy nhất theo cấu trúc sau (không bọc trong markdown ```json):\n" +
+                "1. Trả lời tự nhiên, thân thiện bằng tiếng Việt chuẩn vai trò AI Producer âm nhạc.\n" +
+                "2. Nếu người dùng hỏi câu hỏi giao tiếp thông thường (ví dụ: \"bạn có thể giúp gì\", \"chào bạn\", \"bạn là ai\"), hãy giới thiệu bản thân và các tính năng trợ giúp (sáng tạo giai điệu, viết lời ca, gieo vần, tư vấn phối khí) một cách lịch sự, cuốn hút. Để mảng \"notes\" là [] (mảng rỗng).\n" +
+                "3. Nếu người dùng yêu cầu tạo giai điệu/hợp âm/nhạc cụ, hãy tư vấn + trả về 4-12 nốt nhạc phù hợp tông %s trong mảng \"notes\".\n" +
+                "4. Trả về ĐÚNG cấu trúc JSON (không bọc trong markdown ```json):\n" +
                 "{\n" +
-                "  \"explanation\": \"Lời khuyên/Lời ca tiếng Việt ngắn gọn, súc tích\",\n" +
+                "  \"explanation\": \"Nội dung trả lời tiếng Việt sắc sảo (dùng markdown **bold**, *italic*, danh sách)\",\n" +
                 "  \"targetInstrument\": \"PIANO|DRUMS|BASS|SYNTH|GUITAR|STRINGS\",\n" +
                 "  \"notes\": [\n" +
                 "    {\"pitch\": \"C4\", \"startTime\": 0.0, \"duration\": 0.5, \"velocity\": 90}\n" +
@@ -74,7 +75,8 @@ public class GeminiService {
                 musicKey != null ? musicKey : "C Major",
                 bpm > 0 ? bpm : 120,
                 targetInstrument != null ? targetInstrument : "PIANO",
-                prompt != null ? prompt : "Tạo giai điệu hay"
+                prompt != null ? prompt : "Xin chào",
+                musicKey != null ? musicKey : "C Major"
             );
 
             String requestBody = objectMapper.writeValueAsString(
@@ -97,12 +99,14 @@ public class GeminiService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
-                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode root = objectMapper.readTree(response.body());
                 JsonNode candidates = root.path("candidates");
                 if (candidates.isArray() && candidates.size() > 0) {
                     String rawContent = candidates.get(0).path("content").path("parts").get(0).path("text").asText();
                     return parseGeminiTextToResult(rawContent, targetInstrument);
                 }
+            } else {
+                System.err.println("Gemini API Status Error: " + response.statusCode() + " - " + response.body());
             }
         } catch (Exception e) {
             System.err.println("Gemini API call warning: " + e.getMessage());

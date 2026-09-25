@@ -27,6 +27,42 @@ class AudioEngine {
       'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'G4': 392.00, 'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
       'C5': 523.25, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 'A5': 880.00, 'B5': 987.77
     };
+
+    this.autoTuneProcessor = typeof window !== 'undefined' && window.AutoTuneProcessor ? new window.AutoTuneProcessor() : null;
+    this.customInstruments = {};
+  }
+
+  /**
+   * Plugin Architecture: Register custom instrument synthesizers
+   */
+  registerInstrument(name, synthesizerFn) {
+    if (typeof synthesizerFn === 'function') {
+      this.customInstruments[name.toUpperCase()] = synthesizerFn;
+    }
+  }
+
+  getFrequencyFromPitch(pitch) {
+    if (this.pitchFrequencyMap[pitch]) {
+      return this.pitchFrequencyMap[pitch];
+    }
+    const regex = /^([A-G][#b]?)(-?\d+)$/;
+    const match = String(pitch).trim().match(regex);
+    if (!match) return 440;
+    
+    const note = match[1];
+    const octave = parseInt(match[2], 10);
+    const noteOffsets = {
+      'C': 0, 'C#': 1, 'Db': 1,
+      'D': 2, 'D#': 3, 'Eb': 3,
+      'E': 4,
+      'F': 5, 'F#': 6, 'Gb': 6,
+      'G': 7, 'G#': 8, 'Ab': 8,
+      'A': 9, 'A#': 10, 'Bb': 10,
+      'B': 11
+    };
+    if (noteOffsets[note] === undefined) return 440;
+    const midi = (octave + 1) * 12 + noteOffsets[note];
+    return 440 * Math.pow(2, (midi - 69) / 12);
   }
 
   init() {
@@ -58,13 +94,11 @@ class AudioEngine {
       this.createSimpleReverbBuffer();
 
       // Routing
-      this.masterFilter.connect(this.masterGain);
       this.masterFilter.connect(this.delayNode);
-      this.delayNode.connect(this.masterGain);
       this.masterFilter.connect(this.reverbNode);
-      this.reverbNode.connect(this.reverbGain);
+      this.masterFilter.connect(this.masterGain);
+      this.delayGain.connect(this.masterGain);
       this.reverbGain.connect(this.masterGain);
-
       this.masterGain.connect(this.ctx.destination);
     }
 
@@ -102,7 +136,7 @@ class AudioEngine {
 
   playNote(pitch, duration = 0.5, instrument = 'PIANO', volume = 0.8, pan = 0) {
     this.init();
-    const freq = this.pitchFrequencyMap[pitch] || 440;
+    const freq = this.getFrequencyFromPitch(pitch);
     const now = this.ctx.currentTime;
 
     const panner = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
@@ -118,7 +152,13 @@ class AudioEngine {
       gainNode.connect(this.masterFilter);
     }
 
-    switch (instrument.toUpperCase()) {
+    const instUpper = (instrument || 'PIANO').toUpperCase();
+    if (this.customInstruments[instUpper]) {
+      this.customInstruments[instUpper]({ freq, now, duration, gainNode, volume, pitch, ctx: this.ctx });
+      return;
+    }
+
+    switch (instUpper) {
       case 'PIANO':
         this.synthesizePiano(freq, now, duration, gainNode, volume);
         break;
@@ -136,6 +176,12 @@ class AudioEngine {
         break;
       case 'GUITAR':
         this.synthesizeGuitar(freq, now, duration, gainNode, volume);
+        break;
+      case 'ORGAN':
+        this.synthesizeOrgan(freq, now, duration, gainNode, volume);
+        break;
+      case 'MARIMBA':
+        this.synthesizeMarimba(freq, now, duration, gainNode, volume);
         break;
       default:
         this.synthesizePiano(freq, now, duration, gainNode, volume);
@@ -285,6 +331,54 @@ class AudioEngine {
     osc.connect(gainNode);
     osc.start(now);
     osc.stop(now + duration + 0.25);
+  }
+
+  synthesizeOrgan(freq, now, duration, gainNode, volume) {
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const osc3 = this.ctx.createOscillator();
+    osc1.type = 'sine';
+    osc2.type = 'sine';
+    osc3.type = 'sine';
+
+    osc1.frequency.setValueAtTime(freq, now);
+    osc2.frequency.setValueAtTime(freq * 2, now);
+    osc3.frequency.setValueAtTime(freq * 3, now);
+
+    const g1 = this.ctx.createGain();
+    const g2 = this.ctx.createGain();
+    const g3 = this.ctx.createGain();
+    g1.gain.value = 0.5 * volume;
+    g2.gain.value = 0.3 * volume;
+    g3.gain.value = 0.2 * volume;
+
+    osc1.connect(g1);
+    osc2.connect(g2);
+    osc3.connect(g3);
+    g1.connect(gainNode);
+    g2.connect(gainNode);
+    g3.connect(gainNode);
+
+    gainNode.gain.setValueAtTime(0.7 * volume, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.1);
+
+    osc1.start(now); osc2.start(now); osc3.start(now);
+    osc1.stop(now + duration + 0.15);
+    osc2.stop(now + duration + 0.15);
+    osc3.stop(now + duration + 0.15);
+  }
+
+  synthesizeMarimba(freq, now, duration, gainNode, volume) {
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+
+    gainNode.gain.setValueAtTime(1.0 * volume, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+    osc.connect(gainNode);
+    osc.start(now);
+    osc.stop(now + 0.28);
   }
 
   startPlayback(bpm, onBeatCallback) {

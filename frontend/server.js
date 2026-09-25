@@ -17,7 +17,8 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-  let filePath = path.join(PUBLIC_DIR, req.url === '/' ? 'index.html' : req.url);
+  let requestPath = req.url.split('?')[0];
+  let filePath = path.join(PUBLIC_DIR, requestPath === '/' ? 'index.html' : requestPath);
   let extname = String(path.extname(filePath)).toLowerCase();
   let contentType = mimeTypes[extname] || 'application/octet-stream';
 
@@ -33,7 +34,8 @@ const server = http.createServer((req, res) => {
     } else {
       res.writeHead(200, {
         'Content-Type': contentType,
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-store, no-cache, must-revalidate'
       });
       res.end(content, 'utf-8');
     }

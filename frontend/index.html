@@ -63,6 +63,10 @@
           <button id="btnModeAdvanced" class="mode-btn">Nâng cao (Advanced)</button>
         </div>
 
+        <button id="btnDemoSong" class="btn-action demo-btn" title="Tải bài hát mẫu 4 track để làm thử & nghe thử">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> 🎵 Bài Hát Mẫu
+        </button>
+
         <button id="btnSaveProject" class="btn-action primary">
           <i class="fa-solid fa-cloud-arrow-up"></i> Lưu Dự Án
         </button>
@@ -83,73 +87,92 @@
           <i class="fa-solid fa-guitar"></i>
         </div>
 
-        <div class="instrument-list">
-          <div class="instrument-card" onclick="app.addTrack('PIANO')">
+        <div class="instrument-list" id="sidebarInstrumentList">
+          <div class="instrument-card" data-inst="PIANO" onclick="app.selectOrAddInstrument('PIANO')">
             <div class="instrument-info">
               <div class="instrument-icon"><i class="fa-solid fa-keyboard"></i></div>
               <span class="instrument-name">Grand Piano</span>
             </div>
-            <i class="fa-solid fa-plus"></i>
+            <button class="btn-icon-sm" title="Tạo Track mới" onclick="event.stopPropagation(); app.addTrack('PIANO');"><i class="fa-solid fa-plus"></i></button>
           </div>
 
-          <div class="instrument-card" onclick="app.addTrack('SYNTH')">
+          <div class="instrument-card" data-inst="SYNTH" onclick="app.selectOrAddInstrument('SYNTH')">
             <div class="instrument-info">
               <div class="instrument-icon"><i class="fa-solid fa-sliders"></i></div>
               <span class="instrument-name">Synth Lead</span>
             </div>
-            <i class="fa-solid fa-plus"></i>
+            <button class="btn-icon-sm" title="Tạo Track mới" onclick="event.stopPropagation(); app.addTrack('SYNTH');"><i class="fa-solid fa-plus"></i></button>
           </div>
 
-          <div class="instrument-card" onclick="app.addTrack('BASS')">
+          <div class="instrument-card" data-inst="BASS" onclick="app.selectOrAddInstrument('BASS')">
             <div class="instrument-info">
               <div class="instrument-icon"><i class="fa-solid fa-bolt"></i></div>
               <span class="instrument-name">Deep Bass</span>
             </div>
-            <i class="fa-solid fa-plus"></i>
+            <button class="btn-icon-sm" title="Tạo Track mới" onclick="event.stopPropagation(); app.addTrack('BASS');"><i class="fa-solid fa-plus"></i></button>
           </div>
 
-          <div class="instrument-card" onclick="app.addTrack('DRUMS')">
+          <div class="instrument-card" data-inst="DRUMS" onclick="app.selectOrAddInstrument('DRUMS')">
             <div class="instrument-info">
               <div class="instrument-icon"><i class="fa-solid fa-drum"></i></div>
               <span class="instrument-name">Drums Beat</span>
             </div>
-            <i class="fa-solid fa-plus"></i>
+            <button class="btn-icon-sm" title="Tạo Track mới" onclick="event.stopPropagation(); app.addTrack('DRUMS');"><i class="fa-solid fa-plus"></i></button>
           </div>
 
-          <div class="instrument-card" onclick="app.addTrack('STRINGS')">
+          <div class="instrument-card" data-inst="STRINGS" onclick="app.selectOrAddInstrument('STRINGS')">
             <div class="instrument-info">
               <div class="instrument-icon"><i class="fa-solid fa-music"></i></div>
               <span class="instrument-name">Ambient Strings</span>
             </div>
-            <i class="fa-solid fa-plus"></i>
+            <button class="btn-icon-sm" title="Tạo Track mới" onclick="event.stopPropagation(); app.addTrack('STRINGS');"><i class="fa-solid fa-plus"></i></button>
+          </div>
+
+          <div class="instrument-card" data-inst="GUITAR" onclick="app.selectOrAddInstrument('GUITAR')">
+            <div class="instrument-info">
+              <div class="instrument-icon"><i class="fa-solid fa-guitar"></i></div>
+              <span class="instrument-name">Acoustic Guitar</span>
+            </div>
+            <button class="btn-icon-sm" title="Tạo Track mới" onclick="event.stopPropagation(); app.addTrack('GUITAR');"><i class="fa-solid fa-plus"></i></button>
+          </div>
+
+          <div class="instrument-card" data-inst="ORGAN" onclick="app.selectOrAddInstrument('ORGAN')">
+            <div class="instrument-info">
+              <div class="instrument-icon"><i class="fa-solid fa-church"></i></div>
+              <span class="instrument-name">Vintage Organ</span>
+            </div>
+            <button class="btn-icon-sm" title="Tạo Track mới" onclick="event.stopPropagation(); app.addTrack('ORGAN');"><i class="fa-solid fa-plus"></i></button>
           </div>
         </div>
 
         <!-- Sample Loop Library Panel -->
-        <div style="margin-top: 10px;">
-          <div class="section-title">Thư viện Mẫu (Sample Library)</div>
-          <div class="instrument-list">
+        <div style="margin-top: 8px;">
+          <div class="section-title" style="font-size: 0.72rem; cursor: pointer;" onclick="app.toggleSidebarSection('sampleLibraryList')">
+            <span>Thư viện Mẫu (Sample Library)</span>
+            <i class="fa-solid fa-chevron-down" id="iconSampleLibrary"></i>
+          </div>
+          <div class="instrument-list" id="sampleLibraryList" style="margin-top: 4px;">
             <div class="instrument-card" onclick="app.addSampleLoop('POP_PIANO')">
               <div class="instrument-info">
                 <div class="instrument-icon"><i class="fa-solid fa-record-vinyl"></i></div>
                 <span class="instrument-name">Pop Chord Loop</span>
               </div>
-              <i class="fa-solid fa-file-audio"></i>
+              <i class="fa-solid fa-file-audio" style="font-size: 0.75rem; color: var(--primary);"></i>
             </div>
             <div class="instrument-card" onclick="app.addSampleLoop('LOFI_DRUMS')">
               <div class="instrument-info">
                 <div class="instrument-icon"><i class="fa-solid fa-compact-disc"></i></div>
                 <span class="instrument-name">Lo-Fi Drum Beat</span>
               </div>
-              <i class="fa-solid fa-file-audio"></i>
+              <i class="fa-solid fa-file-audio" style="font-size: 0.75rem; color: var(--primary);"></i>
             </div>
           </div>
         </div>
 
         <!-- Master Audio Effects Controls (Advanced Mode) -->
-        <div id="masterFxCard" style="margin-top: 10px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); display: none;">
-          <div class="section-title" style="margin-bottom: 6px;">Hiệu ứng Master FX (PRO DAW)</div>
-          <div style="font-size: 0.75rem; display: flex; flex-direction: column; gap: 6px;">
+        <div id="masterFxCard" style="margin-top: 8px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border); display: none;">
+          <div class="section-title" style="margin-bottom: 4px; font-size: 0.72rem;">Hiệu ứng Master FX (PRO DAW)</div>
+          <div style="font-size: 0.72rem; display: flex; flex-direction: column; gap: 4px;">
             <div>
               <span>Reverb Vang: </span>
               <input type="range" min="0" max="80" value="30" style="width: 100%; accent-color: var(--primary);" 
@@ -164,19 +187,19 @@
         </div>
 
         <!-- Voice Recorder Box -->
-        <div class="voice-recorder-card">
-          <div class="voice-title">
+        <div class="voice-recorder-card" style="margin-top: 8px; padding: 8px 10px;">
+          <div class="voice-title" style="font-size: 0.75rem;">
             <i class="fa-solid fa-microphone-lines"></i>
-            <span>Hát nhẩm / Hum sang Giai điệu</span>
+            <span>Hát nhẩm sang Giai điệu</span>
           </div>
-          <p style="font-size: 0.75rem; color: var(--text-muted);">
-            Hát hoặc huýt sáo một câu nhạc ngắn. AI sẽ tự trích xuất nốt nhạc thành bài hát!
+          <p style="font-size: 0.7rem; color: var(--text-muted); margin: 3px 0 6px;">
+            Hát/huýt sáo câu nhạc ngắn, AI sẽ tạo thành bài hát!
           </p>
-          <button id="btnRecordMic" class="btn-record-mic">
+          <button id="btnRecordMic" class="btn-record-mic" style="padding: 5px 8px; font-size: 0.75rem;">
             <i class="fa-solid fa-microphone"></i> Bắt đầu Thu Âm
           </button>
-          <div id="micStatus" style="font-size: 0.75rem; color: var(--primary); text-align: center; display: none;">
-            Đang lắng nghe nốt nhạc... <span id="detectedNote">--</span>
+          <div id="micStatus" style="font-size: 0.72rem; color: var(--primary); text-align: center; display: none; margin-top: 4px;">
+            Đang lắng nghe... <span id="detectedNote">--</span>
           </div>
         </div>
       </aside>
@@ -187,6 +210,36 @@
         <div id="modeBannerTip" class="mode-banner-tip">
           <i class="fa-solid fa-wand-magic-sparkles"></i>
           <span><strong>Chế độ Dễ làm (Beginner Mode):</strong> AI Copilot tự động hỗ trợ phối khí, căn chỉnh cao độ & vần điệu cho bạn!</span>
+        </div>
+
+        <!-- Timeline Zoom Bar & Clip Action Toolbar -->
+        <div class="timeline-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label"><i class="fa-solid fa-magnifying-glass"></i> Zoom Timeline:</span>
+            <button class="btn-toolbar" onclick="app.adjustZoom(-0.25)" title="Thu nhỏ (-)">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <input type="range" id="timelineZoomSlider" class="zoom-slider" min="50" max="300" value="100" 
+              oninput="app.setZoomLevel(this.value / 100)">
+            <button class="btn-toolbar" onclick="app.adjustZoom(0.25)" title="Phóng to (+)">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+            <button class="btn-toolbar" onclick="app.resetZoom()" title="Đặt lại 100%">
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+          </div>
+
+          <div class="toolbar-group">
+            <button class="btn-toolbar primary" onclick="app.splitActiveClipAtPlayhead()" title="Cắt / Ngắt đoạn Clip tại vị trí Playhead (Ctrl+S)">
+              <i class="fa-solid fa-scissors"></i> Cắt Clip
+            </button>
+            <button class="btn-toolbar" onclick="app.duplicateActiveClip()" title="Nhân bản Clip (Ctrl+D)">
+              <i class="fa-solid fa-clone"></i> Nhân Bản
+            </button>
+            <button class="btn-toolbar danger" onclick="app.deleteActiveClip()" title="Xóa Clip (Delete)">
+              <i class="fa-solid fa-trash-can"></i> Xóa Clip
+            </button>
+          </div>
         </div>
 
         <!-- Ruler Bar -->
@@ -202,24 +255,28 @@
         <!-- Track Container -->
         <div id="tracksContainer" class="tracks-container">
           <!-- Playhead Marker -->
-          <div id="playhead" class="playhead">
+          <div id="playhead" class="playhead" title="Kéo kim màu đỏ đến đúng vị trí muốn cắt / sửa bài">
             <div class="playhead-head"></div>
+            <div class="playhead-line"></div>
+            <div id="playheadTooltip" class="playhead-tooltip">1 Bar</div>
           </div>
         </div>
 
         <!-- Bottom Virtual Piano Keyboard -->
         <div class="virtual-keyboard-panel">
+          <!-- Drag-to-Resize Handle Bar -->
+          <div id="keyboardResizeHandle" class="keyboard-resize-handle" title="Nhấp kéo lên / xuống để chỉnh độ cao bàn phím">
+            <div class="resize-grip-line"></div>
+          </div>
+
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">
-                <i class="fa-solid fa-keyboard"></i> Bàn Phím Nhạc Cụ Ảo (A S D F G H J K L ; ' / Z X C V B N M)
-              </span>
-              <span style="font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;">
-                Phím 1-5 chọn nhạc cụ • [ ] đổi Quãng tám
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--primary);">
+                <i class="fa-solid fa-keyboard"></i> Bàn Phím Ảo
               </span>
             </div>
 
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
               <!-- Octave Shift -->
               <div class="octave-controls" style="display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--glass-border);">
                 <button class="btn-icon-sm" onclick="app.shiftOctave(-1)" title="Giảm 1 Quãng tám ([)"><i class="fa-solid fa-minus"></i> Oct</button>
@@ -233,13 +290,18 @@
               </button>
 
               <label style="font-size:0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                <input type="checkbox" id="chkAutoQuantize" checked style="accent-color: var(--primary);"> Auto-Quantize (1/8)
+                <input type="checkbox" id="chkAutoQuantize" checked style="accent-color: var(--primary);"> Quantize (1/8)
               </label>
 
               <button class="btn-action" style="padding: 4px 10px; font-size: 0.75rem;" onclick="app.openPianoRollModal()">
                 <i class="fa-solid fa-sliders"></i> Piano Roll Grid
               </button>
-              <span id="activeInstrumentLabel" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">
+
+              <button class="btn-action" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.08);" onclick="app.toggleKeyboardVisibility()" title="Thu gọn / Mở rộng Bàn phím Ảo">
+                <i class="fa-solid fa-chevron-down" id="keyboardToggleIcon"></i> Phím Ảo
+              </button>
+              
+              <span id="activeInstrumentLabel" style="font-size: 0.78rem; font-weight: 700; color: var(--primary);">
                 Nhạc cụ: Piano
               </span>
             </div>
@@ -248,28 +310,28 @@
           <!-- Extended 2-Octave Keys Container -->
           <div id="pianoKeys" class="piano-keys extended-keyboard">
             <!-- Bass Octave 3 White Keys -->
-            <div class="key-white bass" data-note="C3">C3 (Z)</div>
-            <div class="key-white bass" data-note="D3">D3 (X)</div>
-            <div class="key-white bass" data-note="E3">E3 (C)</div>
-            <div class="key-white bass" data-note="F3">F3 (V)</div>
-            <div class="key-white bass" data-note="G3">G3 (B)</div>
-            <div class="key-white bass" data-note="A3">A3 (N)</div>
-            <div class="key-white bass" data-note="B3">B3 (M)</div>
+            <div class="key-white bass" data-note="C3">C3</div>
+            <div class="key-white bass" data-note="D3">D3</div>
+            <div class="key-white bass" data-note="E3">E3</div>
+            <div class="key-white bass" data-note="F3">F3</div>
+            <div class="key-white bass" data-note="G3">G3</div>
+            <div class="key-white bass" data-note="A3">A3</div>
+            <div class="key-white bass" data-note="B3">B3</div>
 
             <!-- Middle Octave 4 White Keys -->
-            <div class="key-white" data-note="C4">C4 (A)</div>
-            <div class="key-white" data-note="D4">D4 (S)</div>
-            <div class="key-white" data-note="E4">E4 (D)</div>
-            <div class="key-white" data-note="F4">F4 (F)</div>
-            <div class="key-white" data-note="G4">G4 (G)</div>
-            <div class="key-white" data-note="A4">A4 (H)</div>
-            <div class="key-white" data-note="B4">B4 (J)</div>
+            <div class="key-white" data-note="C4">C4</div>
+            <div class="key-white" data-note="D4">D4</div>
+            <div class="key-white" data-note="E4">E4</div>
+            <div class="key-white" data-note="F4">F4</div>
+            <div class="key-white" data-note="G4">G4</div>
+            <div class="key-white" data-note="A4">A4</div>
+            <div class="key-white" data-note="B4">B4</div>
 
             <!-- High Octave 5 White Keys -->
-            <div class="key-white high" data-note="C5">C5 (K)</div>
-            <div class="key-white high" data-note="D5">D5 (L)</div>
-            <div class="key-white high" data-note="E5">E5 (;)</div>
-            <div class="key-white high" data-note="F5">F5 (')</div>
+            <div class="key-white high" data-note="C5">C5</div>
+            <div class="key-white high" data-note="D5">D5</div>
+            <div class="key-white high" data-note="E5">E5</div>
+            <div class="key-white high" data-note="F5">F5</div>
 
             <!-- Black Keys -->
             <div class="key-black" data-note="C#3" style="left: 4.8%;">C#3</div>
@@ -278,11 +340,11 @@
             <div class="key-black" data-note="G#3" style="left: 32.8%;">G#3</div>
             <div class="key-black" data-note="A#3" style="left: 39.8%;">A#3</div>
 
-            <div class="key-black" data-note="C#4" style="left: 53.8%;">C#4 (W)</div>
-            <div class="key-black" data-note="D#4" style="left: 60.8%;">D#4 (E)</div>
-            <div class="key-black" data-note="F#4" style="left: 74.8%;">F#4 (T)</div>
-            <div class="key-black" data-note="G#4" style="left: 81.8%;">G#4 (Y)</div>
-            <div class="key-black" data-note="A#4" style="left: 88.8%;">A#4 (U)</div>
+            <div class="key-black" data-note="C#4" style="left: 53.8%;">C#4</div>
+            <div class="key-black" data-note="D#4" style="left: 60.8%;">D#4</div>
+            <div class="key-black" data-note="F#4" style="left: 74.8%;">F#4</div>
+            <div class="key-black" data-note="G#4" style="left: 81.8%;">G#4</div>
+            <div class="key-black" data-note="A#4" style="left: 88.8%;">A#4</div>
           </div>
         </div>
       </section>
@@ -310,6 +372,41 @@
             <button class="btn-action export" onclick="app.requestAiChorus()">
               <i class="fa-solid fa-wand-magic-sparkles"></i> AI Viết Điệp Khúc
             </button>
+          </div>
+        </div>
+
+        <!-- AI Auto-Tune Studio Panel -->
+        <div id="autoTuneStudioCard" class="autotune-card">
+          <div class="autotune-header">
+            <div class="autotune-title">
+              <i class="fa-solid fa-microphone-lines"></i>
+              <span>AI Auto-Tune Studio Processor (Real-Time Pitch Correction)</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="autoTuneToggle" onchange="app.toggleAutoTune(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="autotune-body">
+            <div class="autotune-control-group">
+              <label>Retune Speed (Tốc Độ Nắn Cao Độ): <strong id="retuneSpeedLabel">10ms (T-Pain Hard)</strong></label>
+              <input type="range" id="retuneSpeedSlider" min="0" max="80" value="10" 
+                oninput="app.setRetuneSpeed(this.value)">
+              <div class="speed-range-labels">
+                <span>0ms (T-Pain Hard)</span>
+                <span>30ms (Pop Warm)</span>
+                <span>80ms (Natural Smooth)</span>
+              </div>
+            </div>
+            <div class="autotune-status-group">
+              <div class="status-badge">
+                <i class="fa-solid fa-circle" id="autoTuneLed" style="color: #38ef7d;"></i>
+                <span>Âm Giai Mục Tiêu: <strong id="autoTuneKeyDisplay">C Major</strong></span>
+              </div>
+              <div class="status-badge">
+                <span>Nắn Nốt Gần Nhất: <strong id="autoTuneTargetNote">C4 (261.6Hz)</strong></span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -574,10 +671,25 @@ Cho từng nốt nhạc nhẹ trôi thật êm đềm..."></textarea>
 
     <!-- Piano Roll Editor Modal -->
     <div id="pianoRollModal" class="modal-overlay">
-      <div class="modal-card" style="width: 750px; max-width: 90vw;">
-        <div class="modal-title">
-          <i class="fa-solid fa-grip"></i>
-          <span>Piano Roll Editor — Chỉnh Sửa Nốt Nhạc Trực Quan</span>
+      <div class="modal-card" style="width: 780px; max-width: 90vw;">
+        <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-grip"></i>
+            <span>Piano Roll Editor — Chỉnh Sửa Nốt Nhạc</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;">
+            <span style="color: var(--text-muted);"><i class="fa-solid fa-guitar"></i> Nhạc cụ:</span>
+            <select id="pianoRollInstrumentSelect" class="track-instrument-select" onchange="app.changeActiveTrackInstrument(this.value)">
+              <option value="PIANO">🎹 Grand Piano</option>
+              <option value="SYNTH">🎛 Synth Lead</option>
+              <option value="BASS">⚡ Deep Bass</option>
+              <option value="DRUMS">🥁 Drums Beat</option>
+              <option value="STRINGS">🎻 Ambient Strings</option>
+              <option value="GUITAR">🎸 Acoustic Guitar</option>
+              <option value="ORGAN">🎹 Vintage Organ</option>
+              <option value="MARIMBA">🪵 Marimba Wood</option>
+            </select>
+          </div>
         </div>
         <div style="font-size: 0.8rem; color: var(--text-muted);">
           Nhấp chuột vào các ô dưới đây để Thêm / Xóa nốt nhạc vào track hiện tại:
@@ -597,6 +709,7 @@ Cho từng nốt nhạc nhẹ trôi thật êm đềm..."></textarea>
   </div>
 
   <!-- Audio & Application Scripts -->
+  <script src="js/audio/AutoTuneProcessor.js"></script>
   <script src="js/audio/AudioEngine.js"></script>
   <script src="js/audio/PitchTracker.js"></script>
   <script src="js/audio/WavExporter.js"></script>

@@ -64,7 +64,7 @@ class WavExporter {
   }
 
   static renderNoteOffline(ctx, pitch, startTime, duration, instrument, destination) {
-    const freq = window.audioEngine ? window.audioEngine.pitchFrequencyMap[pitch] || 440 : 440;
+    const freq = window.audioEngine ? window.audioEngine.getFrequencyFromPitch(pitch) : 440;
     const noteGain = ctx.createGain();
     noteGain.gain.setValueAtTime(0.001, startTime);
 

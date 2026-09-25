@@ -73,4 +73,11 @@ public class AiCopilotController {
             @RequestParam String status) {
         return ResponseEntity.ok(aiCopilotService.updateSuggestionStatus(suggestionId, status));
     }
+
+    @PostMapping("/suggestions/{suggestionId}/accept")
+    public ResponseEntity<AiSuggestionResponse> acceptSuggestion(
+            @PathVariable Long projectId,
+            @PathVariable Long suggestionId) {
+        return ResponseEntity.ok(aiCopilotService.updateSuggestionStatus(suggestionId, "ACCEPTED"));
+    }
 }

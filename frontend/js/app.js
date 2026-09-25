@@ -21,6 +21,8 @@ class MusicStudioApp {
     this.isLiveRecordingKeyboard = false;
     this.octaveShift = 0;
     this.activeKeyPresses = {};
+    this.zoomFactor = 1.0;
+    this.selectedClipId = null;
 
     this.keyNoteMap = {
       // Bass Octave 3 (Z X C V B N M)
@@ -82,6 +84,9 @@ class MusicStudioApp {
       this.setStudioMode('advanced');
     });
 
+    this.setupKeyboardResize();
+    this.setupPlayheadDragging();
+
     // Keyboard Shortcuts & Playing Engine
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -89,17 +94,20 @@ class MusicStudioApp {
       if (e.code === 'Space') {
         e.preventDefault();
         this.togglePlayback();
+      } else if (e.code === 'Delete') {
+        this.deleteActiveClip();
+      } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
+        e.preventDefault();
+        this.splitActiveClipAtPlayhead();
       } else if (e.code === 'BracketLeft' || e.code === 'ArrowDown') {
         this.shiftOctave(-1);
       } else if (e.code === 'BracketRight' || e.code === 'ArrowUp') {
         this.shiftOctave(1);
-      } else if (['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].includes(e.code)) {
-        const insts = ['PIANO', 'SYNTH', 'BASS', 'DRUMS', 'STRINGS'];
+      } else if (['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'].includes(e.code)) {
+        const insts = ['PIANO', 'SYNTH', 'BASS', 'DRUMS', 'STRINGS', 'GUITAR', 'ORGAN'];
         const idx = parseInt(e.code.replace('Digit', '')) - 1;
         if (insts[idx]) {
-          this.activeInstrument = insts[idx];
-          const label = document.getElementById('activeInstrumentLabel');
-          if (label) label.innerText = `Nhạc cụ: ${this.activeInstrument}`;
+          this.changeActiveTrackInstrument(insts[idx]);
         }
       } else if (this.keyNoteMap[e.code] && !e.repeat) {
         const rawPitch = this.keyNoteMap[e.code];
@@ -130,19 +138,19 @@ class MusicStudioApp {
         const projects = await res.json();
         if (projects && projects.length > 0) {
           const p = projects[0];
-          this.currentProject = {
-            id: p.id,
-            name: p.name || 'Giai Điệu Đầu Tiên',
-            bpm: p.bpm || 120,
-            musicKey: p.musicKey || 'C Major',
-            tracks: p.tracks || []
-          };
-          if (this.currentProject.tracks.length > 0) {
+          if (p.tracks && p.tracks.length > 0) {
+            this.currentProject = {
+              id: p.id,
+              name: p.name || 'Giai Điệu Đầu Tiên',
+              bpm: p.bpm || 120,
+              musicKey: p.musicKey || 'C Major',
+              tracks: p.tracks
+            };
             this.activeTrackId = this.currentProject.tracks[0].id;
+            this.syncHeaderControls();
+            this.renderTracks();
+            return;
           }
-          this.syncHeaderControls();
-          this.renderTracks();
-          return;
         }
       }
     } catch (err) {
@@ -160,7 +168,7 @@ class MusicStudioApp {
           name: 'Grand Piano',
           instrument: 'PIANO',
           volume: 85,
-          pan: 0,
+          pan: -10,
           muted: false,
           solo: false,
           clips: [
@@ -211,9 +219,144 @@ class MusicStudioApp {
     if (this.currentProject.tracks.length > 0) {
       this.activeTrackId = this.currentProject.tracks[0].id;
     }
-
     this.syncHeaderControls();
     this.renderTracks();
+  }
+
+  loadDemoSong() {
+    this.currentProject = {
+      id: Date.now(),
+      name: 'Bài Hát Mẫu AURA Studio (Demo)',
+      bpm: 120,
+      musicKey: 'C Major',
+      tracks: [
+        {
+          id: Date.now() + 1,
+          name: 'Grand Piano (Hợp Âm)',
+          instrument: 'PIANO',
+          volume: 85,
+          pan: -15,
+          muted: false,
+          solo: false,
+          clips: [{
+            id: Date.now() + 10,
+            name: 'Pop Chord Progression',
+            startTime: 0,
+            duration: 8,
+            clipType: 'NOTE',
+            noteEvents: [
+              { pitch: 'C4', startTime: 0, duration: 2, velocity: 90 },
+              { pitch: 'E4', startTime: 0, duration: 2, velocity: 90 },
+              { pitch: 'G4', startTime: 0, duration: 2, velocity: 90 },
+              { pitch: 'G4', startTime: 2, duration: 2, velocity: 90 },
+              { pitch: 'B4', startTime: 2, duration: 2, velocity: 90 },
+              { pitch: 'D5', startTime: 2, duration: 2, velocity: 90 },
+              { pitch: 'A4', startTime: 4, duration: 2, velocity: 90 },
+              { pitch: 'C5', startTime: 4, duration: 2, velocity: 90 },
+              { pitch: 'E5', startTime: 4, duration: 2, velocity: 90 },
+              { pitch: 'F4', startTime: 6, duration: 2, velocity: 90 },
+              { pitch: 'A4', startTime: 6, duration: 2, velocity: 90 },
+              { pitch: 'C5', startTime: 6, duration: 2, velocity: 90 }
+            ]
+          }]
+        },
+        {
+          id: Date.now() + 2,
+          name: 'Deep Bass (Tông Bass)',
+          instrument: 'BASS',
+          volume: 90,
+          pan: 0,
+          muted: false,
+          solo: false,
+          clips: [{
+            id: Date.now() + 11,
+            name: 'Bassline Groove',
+            startTime: 0,
+            duration: 8,
+            clipType: 'NOTE',
+            noteEvents: [
+              { pitch: 'C2', startTime: 0, duration: 1.5, velocity: 100 },
+              { pitch: 'C2', startTime: 1.5, duration: 0.5, velocity: 85 },
+              { pitch: 'G2', startTime: 2.0, duration: 1.5, velocity: 100 },
+              { pitch: 'G2', startTime: 3.5, duration: 0.5, velocity: 85 },
+              { pitch: 'A2', startTime: 4.0, duration: 1.5, velocity: 100 },
+              { pitch: 'A2', startTime: 5.5, duration: 0.5, velocity: 85 },
+              { pitch: 'F2', startTime: 6.0, duration: 1.5, velocity: 100 },
+              { pitch: 'F2', startTime: 7.5, duration: 0.5, velocity: 85 }
+            ]
+          }]
+        },
+        {
+          id: Date.now() + 3,
+          name: 'Drums Beat (Nhịp Trống Pop)',
+          instrument: 'DRUMS',
+          volume: 88,
+          pan: 0,
+          muted: false,
+          solo: false,
+          clips: [{
+            id: Date.now() + 12,
+            name: 'Pop Kick-Snare Beat',
+            startTime: 0,
+            duration: 8,
+            clipType: 'NOTE',
+            noteEvents: [
+              { pitch: 'C2', startTime: 0.0, duration: 0.5, velocity: 110 },
+              { pitch: 'F#2', startTime: 0.5, duration: 0.5, velocity: 80 },
+              { pitch: 'D2', startTime: 1.0, duration: 0.5, velocity: 100 },
+              { pitch: 'F#2', startTime: 1.5, duration: 0.5, velocity: 80 },
+              { pitch: 'C2', startTime: 2.0, duration: 0.5, velocity: 110 },
+              { pitch: 'F#2', startTime: 2.5, duration: 0.5, velocity: 80 },
+              { pitch: 'D2', startTime: 3.0, duration: 0.5, velocity: 100 },
+              { pitch: 'F#2', startTime: 3.5, duration: 0.5, velocity: 80 },
+              { pitch: 'C2', startTime: 4.0, duration: 0.5, velocity: 110 },
+              { pitch: 'F#2', startTime: 4.5, duration: 0.5, velocity: 80 },
+              { pitch: 'D2', startTime: 5.0, duration: 0.5, velocity: 100 },
+              { pitch: 'F#2', startTime: 5.5, duration: 0.5, velocity: 80 },
+              { pitch: 'C2', startTime: 6.0, duration: 0.5, velocity: 110 },
+              { pitch: 'D2', startTime: 7.0, duration: 0.5, velocity: 100 }
+            ]
+          }]
+        },
+        {
+          id: Date.now() + 4,
+          name: 'Synth Lead (Giai Điệu Lead)',
+          instrument: 'SYNTH',
+          volume: 82,
+          pan: 15,
+          muted: false,
+          solo: false,
+          clips: [{
+            id: Date.now() + 13,
+            name: 'Melody Lead Hook',
+            startTime: 0,
+            duration: 8,
+            clipType: 'NOTE',
+            noteEvents: [
+              { pitch: 'E4', startTime: 0, duration: 0.5, velocity: 95 },
+              { pitch: 'G4', startTime: 0.5, duration: 0.5, velocity: 95 },
+              { pitch: 'C5', startTime: 1.0, duration: 1.0, velocity: 100 },
+              { pitch: 'B4', startTime: 2.0, duration: 0.5, velocity: 95 },
+              { pitch: 'G4', startTime: 2.5, duration: 0.5, velocity: 95 },
+              { pitch: 'D5', startTime: 3.0, duration: 1.0, velocity: 100 },
+              { pitch: 'C5', startTime: 4.0, duration: 0.5, velocity: 95 },
+              { pitch: 'E5', startTime: 4.5, duration: 0.5, velocity: 100 },
+              { pitch: 'A5', startTime: 5.0, duration: 1.0, velocity: 105 },
+              { pitch: 'G5', startTime: 6.0, duration: 1.5, velocity: 105 }
+            ]
+          }]
+        }
+      ]
+    };
+
+    this.activeTrackId = this.currentProject.tracks[0].id;
+    this.activeInstrument = 'PIANO';
+    this.syncHeaderControls();
+    this.renderTracks();
+    this.showToast('🎵 Đã tạo Bài hát mẫu hoàn chỉnh với 4 nhạc cụ (Piano, Bass, Drums, Synth)!', 'info');
+    if (!this.isPlaying) {
+      this.togglePlayback();
+    }
   }
 
   syncHeaderControls() {
@@ -230,7 +373,9 @@ class MusicStudioApp {
       'BASS': 'Deep Bass',
       'DRUMS': 'Drums Beat',
       'STRINGS': 'Ambient Strings',
-      'GUITAR': 'Acoustic Guitar'
+      'GUITAR': 'Acoustic Guitar',
+      'ORGAN': 'Vintage Organ',
+      'MARIMBA': 'Marimba Wood'
     };
 
     const newTrack = {
@@ -247,7 +392,19 @@ class MusicStudioApp {
     this.currentProject.tracks.push(newTrack);
     this.activeTrackId = newTrack.id;
     this.activeInstrument = instrument;
-    document.getElementById('activeInstrumentLabel').innerText = `Nhạc cụ đang chọn: ${newTrack.name}`;
+    this.updateActiveInstrumentUI();
+
+    if (this.currentProject.id) {
+      fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTrack.name, instrument: newTrack.instrument, volume: newTrack.volume, pan: newTrack.pan })
+      }).then(res => res.ok ? res.json() : null).then(savedTrack => {
+        if (savedTrack && savedTrack.id) {
+          newTrack.id = savedTrack.id;
+        }
+      }).catch(() => {});
+    }
 
     this.renderTracks();
   }
@@ -317,6 +474,7 @@ class MusicStudioApp {
 
   renderTracks() {
     const container = document.getElementById('tracksContainer');
+    if (!container) return;
     const playheadHtml = `<div id="playhead" class="playhead"><div class="playhead-head"></div></div>`;
     container.innerHTML = playheadHtml;
 
@@ -332,55 +490,105 @@ class MusicStudioApp {
       header.onclick = () => {
         this.activeTrackId = track.id;
         this.activeInstrument = track.instrument;
-        document.getElementById('activeInstrumentLabel').innerText = `Nhạc cụ đang chọn: ${track.name}`;
+        this.updateActiveInstrumentUI();
         this.renderTracks();
       };
 
+      const instOptions = [
+        { id: 'PIANO', name: '🎹 Piano' },
+        { id: 'SYNTH', name: '🎛 Synth' },
+        { id: 'BASS', name: '⚡ Bass' },
+        { id: 'DRUMS', name: '🥁 Drums' },
+        { id: 'STRINGS', name: '🎻 Strings' },
+        { id: 'GUITAR', name: '🎸 Guitar' },
+        { id: 'ORGAN', name: '🎹 Organ' },
+        { id: 'MARIMBA', name: '🪵 Marimba' }
+      ];
+
+      const selectOptsHtml = instOptions.map(opt => 
+        `<option value="${opt.id}" ${track.instrument === opt.id ? 'selected' : ''}>${opt.name}</option>`
+      ).join('');
+
       header.innerHTML = `
         <div class="track-title-bar">
-          <span class="track-name">${track.name}</span>
+          <input type="text" class="track-name-input" value="${track.name}" 
+            title="Nhấp để đổi tên track"
+            onchange="event.stopPropagation(); app.renameTrack(${track.id}, this.value)"
+            onclick="event.stopPropagation();">
           <div class="track-controls">
-            <button class="btn-track-opt ${track.muted ? 'active-mute' : ''}" onclick="event.stopPropagation(); app.toggleMute(${track.id})">M</button>
-            <button class="btn-track-opt ${track.solo ? 'active-solo' : ''}" onclick="event.stopPropagation(); app.toggleSolo(${track.id})">S</button>
+            <button class="btn-track-opt ${track.muted ? 'active-mute' : ''}" title="Mute (M)" onclick="event.stopPropagation(); app.toggleMute(${track.id})">M</button>
+            <button class="btn-track-opt ${track.solo ? 'active-solo' : ''}" title="Solo (S)" onclick="event.stopPropagation(); app.toggleSolo(${track.id})">S</button>
             <button class="btn-track-delete" title="Xóa khuôn nhạc này" onclick="event.stopPropagation(); app.deleteTrack(${track.id})">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
         </div>
-        <div>
-          <input type="range" class="vol-slider" min="0" max="100" value="${track.volume}" 
-            onchange="event.stopPropagation(); app.setVolume(${track.id}, this.value)">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 2px;">
+          <select class="track-instrument-select" title="Đổi nhạc cụ cho Track" onchange="event.stopPropagation(); app.changeTrackInstrument(${track.id}, this.value)" onclick="event.stopPropagation();">
+            ${selectOptsHtml}
+          </select>
+        </div>
+        <div class="track-sliders-bar" style="margin-top: 4px;">
+          <div class="track-slider-group" title="Âm lượng: ${track.volume}%">
+            <i class="fa-solid fa-volume-high"></i>
+            <input type="range" class="vol-slider" min="0" max="100" value="${track.volume}" 
+              onchange="event.stopPropagation(); app.setVolume(${track.id}, this.value)">
+          </div>
+          <div class="track-slider-group" title="Pan L/R: ${track.pan || 0}">
+            <span style="font-weight: 700; font-size: 0.65rem;">L/R</span>
+            <input type="range" class="pan-slider" min="-50" max="50" value="${track.pan || 0}" 
+              onchange="event.stopPropagation(); app.setPan(${track.id}, this.value)">
+          </div>
         </div>
       `;
 
       const lane = document.createElement('div');
       lane.className = 'track-lane';
+      lane.onclick = (e) => {
+        if (e.target === lane) {
+          const rect = lane.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const beat = Math.max(0, Math.round((clickX / 40) * 4) / 4);
+          if (window.audioEngine) {
+            window.audioEngine.currentBeat = beat * 4;
+          }
+          const playhead = document.getElementById('playhead');
+          if (playhead) {
+            playhead.style.transform = `translateX(${clickX}px)`;
+          }
+        }
+      };
 
       if (track.clips) {
         track.clips.forEach(clip => {
           const clipBlock = document.createElement('div');
-          clipBlock.className = 'clip-block';
+          const instClass = `theme-${(track.instrument || 'PIANO').toLowerCase()}`;
+          const isSelected = clip.id === this.activeClipId;
+          clipBlock.className = `clip-block ${instClass} ${isSelected ? 'active-clip' : ''}`;
+          
+          const widthPx = Math.max(35, clip.duration * 40);
           clipBlock.style.left = `${clip.startTime * 40}px`;
-          clipBlock.style.width = `${clip.duration * 40}px`;
+          clipBlock.style.width = `${widthPx}px`;
 
-          let previewBars = '';
-          if (clip.noteEvents) {
-            clip.noteEvents.forEach(n => {
-              const h = Math.min(18, Math.max(6, n.velocity / 6));
-              previewBars += `<div class="note-preview-bar" style="height: ${h}px;"></div>`;
-            });
-          }
+          const waveformSvg = this.generateWaveformSvg(clip, track.instrument, widthPx);
+
+          const splitBtnHtml = isSelected
+            ? `<button class="btn-clip-split-mini" onclick="event.stopPropagation(); app.splitActiveClipAtPlayhead();" title="Cắt ngắt Clip tại vị trí kim Playhead">✂️ Cắt</button>`
+            : `<span style="font-size:0.62rem; opacity:0.8;">${clip.duration}s</span>`;
 
           clipBlock.innerHTML = `
-            <span>${clip.name}</span>
-            <div class="clip-notes-preview">${previewBars}</div>
+            <div class="clip-handle-left" title="Kéo mép trái để thu ngắn / cắt bỏ đầu Clip"></div>
+            <div class="clip-title-row">
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">${clip.name}</span>
+              ${splitBtnHtml}
+            </div>
+            <div class="clip-waveform-wrap">
+              ${waveformSvg}
+            </div>
+            <div class="clip-handle-right" title="Kéo mép phải để kéo dài / thu ngắn Clip"></div>
           `;
 
-          clipBlock.onclick = (e) => {
-            e.stopPropagation();
-            this.activeTrackId = track.id;
-            this.openPianoRollModal();
-          };
+          this.setupClipInteractivity(clipBlock, clip, track);
 
           lane.appendChild(clipBlock);
         });
@@ -389,6 +597,502 @@ class MusicStudioApp {
       row.appendChild(header);
       row.appendChild(lane);
       container.appendChild(row);
+    });
+
+    this.updateActiveInstrumentUI();
+  }
+
+  changeTrackInstrument(trackId, newInstrument) {
+    const track = this.currentProject.tracks.find(t => t.id === trackId);
+    if (!track) return;
+
+    const oldInst = track.instrument;
+    track.instrument = newInstrument;
+
+    const defaultNames = ['Grand Piano', 'Synth Lead', 'Deep Bass', 'Drums Beat', 'Ambient Strings', 'Acoustic Guitar', 'Vintage Organ', 'Marimba Wood', 'Virtual Track'];
+    const instNames = {
+      'PIANO': 'Grand Piano',
+      'SYNTH': 'Synth Lead',
+      'BASS': 'Deep Bass',
+      'DRUMS': 'Drums Beat',
+      'STRINGS': 'Ambient Strings',
+      'GUITAR': 'Acoustic Guitar',
+      'ORGAN': 'Vintage Organ',
+      'MARIMBA': 'Marimba Wood'
+    };
+
+    if (defaultNames.includes(track.name)) {
+      track.name = instNames[newInstrument] || newInstrument;
+    }
+
+    if (track.id === this.activeTrackId) {
+      this.activeInstrument = newInstrument;
+    }
+
+    if (window.audioEngine) {
+      window.audioEngine.playNote('C4', 0.3, newInstrument, 0.8, track.pan || 0);
+    }
+
+    this.renderTracks();
+    this.updateActiveInstrumentUI();
+    this.showToast(`🎸 Đã đổi nhạc cụ track sang: ${instNames[newInstrument] || newInstrument}`, 'info');
+
+    if (this.currentProject.id) {
+      fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/tracks/${track.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instrument: track.instrument, name: track.name })
+      }).catch(() => {});
+    }
+  }
+
+  changeActiveTrackInstrument(newInstrument) {
+    if (this.activeTrackId) {
+      this.changeTrackInstrument(this.activeTrackId, newInstrument);
+    } else if (this.currentProject.tracks.length > 0) {
+      this.changeTrackInstrument(this.currentProject.tracks[0].id, newInstrument);
+    } else {
+      this.addTrack(newInstrument);
+    }
+  }
+
+  selectOrAddInstrument(inst) {
+    const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId);
+    if (activeTrack) {
+      this.changeTrackInstrument(activeTrack.id, inst);
+    } else if (this.currentProject.tracks.length > 0) {
+      this.changeTrackInstrument(this.currentProject.tracks[0].id, inst);
+    } else {
+      this.addTrack(inst);
+    }
+  }
+
+  setPan(trackId, val) {
+    const track = this.currentProject.tracks.find(t => t.id === trackId);
+    if (track) {
+      track.pan = parseInt(val);
+      if (this.currentProject.id) {
+        fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/tracks/${track.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pan: track.pan })
+        }).catch(() => {});
+      }
+    }
+  }
+
+  renameTrack(trackId, newName) {
+    const track = this.currentProject.tracks.find(t => t.id === trackId);
+    if (track && newName && newName.trim() !== '') {
+      track.name = newName.trim();
+      this.renderTracks();
+      if (this.currentProject.id) {
+        fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/tracks/${track.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: track.name })
+        }).catch(() => {});
+      }
+    }
+  }
+
+  updateActiveInstrumentUI() {
+    const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId);
+    const inst = activeTrack ? activeTrack.instrument : this.activeInstrument;
+    const name = activeTrack ? activeTrack.name : inst;
+
+    const label = document.getElementById('activeInstrumentLabel');
+    if (label) {
+      label.innerText = activeTrack ? `Nhạc cụ đang chọn: ${name} (${inst})` : `Nhạc cụ: ${inst}`;
+    }
+
+    const cards = document.querySelectorAll('#sidebarInstrumentList .instrument-card');
+    cards.forEach(card => {
+      if (card.getAttribute('data-inst') === inst) {
+        card.classList.add('active-instrument');
+      } else {
+        card.classList.remove('active-instrument');
+      }
+    });
+
+    const prSelect = document.getElementById('pianoRollInstrumentSelect');
+    if (prSelect && prSelect.value !== inst) {
+      prSelect.value = inst;
+    }
+  }
+
+  toggleKeyboardVisibility() {
+    const keys = document.getElementById('pianoKeys');
+    const icon = document.getElementById('keyboardToggleIcon');
+    if (keys) {
+      if (keys.style.display === 'none') {
+        keys.style.display = 'flex';
+        if (icon) icon.className = 'fa-solid fa-chevron-down';
+      } else {
+        keys.style.display = 'none';
+        if (icon) icon.className = 'fa-solid fa-chevron-up';
+      }
+    }
+  }
+
+  toggleSidebarSection(sectionId) {
+    const el = document.getElementById(sectionId);
+    const icon = document.getElementById('iconSampleLibrary');
+    if (el) {
+      if (el.style.display === 'none') {
+        el.style.display = 'flex';
+        if (icon) icon.className = 'fa-solid fa-chevron-down';
+      } else {
+        el.style.display = 'none';
+        if (icon) icon.className = 'fa-solid fa-chevron-right';
+      }
+    }
+  }
+
+  generateWaveformSvg(clip, instrument = 'PIANO', widthPx = 200) {
+    const numPoints = Math.max(24, Math.floor(widthPx / 3));
+    const instUpper = (instrument || 'PIANO').toUpperCase();
+    const strokeColors = {
+      'PIANO': '#00F2FE',
+      'SYNTH': '#00E676',
+      'BASS': '#A78BFA',
+      'DRUMS': '#FFB302',
+      'STRINGS': '#FF0844',
+      'GUITAR': '#4FACFE',
+      'ORGAN': '#FF5252',
+      'MARIMBA': '#C084FC'
+    };
+    const strokeColor = strokeColors[instUpper] || '#00F2FE';
+
+    let pathD = '';
+    const midY = 16;
+    const seed = (clip.id || 1) % 100;
+
+    for (let i = 0; i < numPoints; i++) {
+      const x = (i / (numPoints - 1)) * widthPx;
+      let amp = 0;
+      if (clip.noteEvents && clip.noteEvents.length > 0) {
+        const timeAtX = (i / numPoints) * clip.duration;
+        const noteActive = clip.noteEvents.some(n => timeAtX >= n.startTime && timeAtX <= (n.startTime + n.duration));
+        amp = noteActive ? (0.45 + (Math.sin(i * 1.4 + seed) * 0.5 + 0.5) * 0.45) : 0.12;
+      } else {
+        amp = Math.abs(Math.sin(i * 0.75 + seed)) * 0.7 + 0.2;
+      }
+
+      const h = Math.max(3, Math.min(14, amp * 14));
+      pathD += `M ${x.toFixed(1)} ${(midY - h).toFixed(1)} L ${x.toFixed(1)} ${(midY + h).toFixed(1)} `;
+    }
+
+    return `<svg class="clip-waveform-svg" viewBox="0 0 ${widthPx} 32" preserveAspectRatio="none">
+      <path d="${pathD}" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" opacity="0.85" />
+    </svg>`;
+  }
+
+  setupClipInteractivity(clipBlock, clip, track) {
+    let isDragging = false;
+    let isResizingLeft = false;
+    let isResizingRight = false;
+    let startX = 0;
+    let initialStartTime = clip.startTime;
+    let initialDuration = clip.duration;
+
+    clipBlock.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.activeTrackId = track.id;
+      this.activeClipId = clip.id;
+      this.activeInstrument = track.instrument;
+      this.updateActiveInstrumentUI();
+      this.renderTracks();
+    });
+
+    clipBlock.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      this.activeTrackId = track.id;
+      this.activeClipId = clip.id;
+      this.openPianoRollModal();
+    });
+
+    const leftHandle = clipBlock.querySelector('.clip-handle-left');
+    const rightHandle = clipBlock.querySelector('.clip-handle-right');
+
+    if (leftHandle) {
+      leftHandle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        isResizingLeft = true;
+        startX = e.clientX;
+        initialStartTime = clip.startTime;
+        initialDuration = clip.duration;
+        document.body.style.cursor = 'ew-resize';
+      });
+    }
+
+    if (rightHandle) {
+      rightHandle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        isResizingRight = true;
+        startX = e.clientX;
+        initialDuration = clip.duration;
+        document.body.style.cursor = 'ew-resize';
+      });
+    }
+
+    clipBlock.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('clip-handle-left') || e.target.classList.contains('clip-handle-right')) return;
+      isDragging = true;
+      startX = e.clientX;
+      initialStartTime = clip.startTime;
+      this.activeTrackId = track.id;
+      this.activeClipId = clip.id;
+    });
+
+    const onMouseMove = (e) => {
+      if (isDragging) {
+        const dxPx = e.clientX - startX;
+        const dxBeats = dxPx / 40;
+        let newStart = Math.max(0, initialStartTime + dxBeats);
+        // Beat snap (0.25 beat resolution)
+        newStart = Math.round(newStart * 4) / 4;
+        clip.startTime = newStart;
+        clipBlock.style.left = `${newStart * 40}px`;
+      } else if (isResizingRight) {
+        const dxPx = e.clientX - startX;
+        const dxBeats = dxPx / 40;
+        let newDur = Math.max(0.5, initialDuration + dxBeats);
+        newDur = Math.round(newDur * 4) / 4;
+        clip.duration = newDur;
+        clipBlock.style.width = `${newDur * 40}px`;
+      } else if (isResizingLeft) {
+        const dxPx = e.clientX - startX;
+        const dxBeats = dxPx / 40;
+        let newStart = Math.max(0, initialStartTime + dxBeats);
+        newStart = Math.round(newStart * 4) / 4;
+        const diff = initialStartTime - newStart;
+        let newDur = Math.max(0.5, initialDuration + diff);
+        newDur = Math.round(newDur * 4) / 4;
+        clip.startTime = newStart;
+        clip.duration = newDur;
+        clipBlock.style.left = `${newStart * 40}px`;
+        clipBlock.style.width = `${newDur * 40}px`;
+      }
+    };
+
+    const onMouseUp = () => {
+      if (isDragging || isResizingLeft || isResizingRight) {
+        isDragging = false;
+        isResizingLeft = false;
+        isResizingRight = false;
+        document.body.style.cursor = '';
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        this.renderTracks();
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
+
+  splitActiveClipAtPlayhead() {
+    let targetClip = null;
+    let targetTrack = null;
+
+    this.currentProject.tracks.forEach(t => {
+      if (t.clips) {
+        t.clips.forEach(c => {
+          if (c.id === this.activeClipId) {
+            targetClip = c;
+            targetTrack = t;
+          }
+        });
+      }
+    });
+
+    if (!targetClip || !targetTrack) {
+      this.showToast('⚠️ Vui lòng nhấp chọn 1 Clip trên timeline trước khi cắt!', 'warning');
+      return;
+    }
+
+    const playheadBeat = (window.audioEngine ? window.audioEngine.currentBeat : 0) / 4;
+    const clipStart = targetClip.startTime;
+    const clipEnd = targetClip.startTime + targetClip.duration;
+
+    if (playheadBeat <= clipStart || playheadBeat >= clipEnd) {
+      this.showToast('⚠️ Vị trí Playhead kim phát nhạc phải nằm trong Clip để cắt!', 'warning');
+      return;
+    }
+
+    const firstDuration = playheadBeat - clipStart;
+    const secondDuration = clipEnd - playheadBeat;
+
+    targetClip.duration = firstDuration;
+
+    const secondClip = {
+      id: Date.now(),
+      name: `${targetClip.name} (Part 2)`,
+      startTime: playheadBeat,
+      duration: secondDuration,
+      clipType: targetClip.clipType || 'NOTE',
+      noteEvents: targetClip.noteEvents ? targetClip.noteEvents.filter(n => n.startTime >= firstDuration).map(n => ({
+        ...n,
+        startTime: n.startTime - firstDuration
+      })) : []
+    };
+
+    targetTrack.clips.push(secondClip);
+    this.activeClipId = secondClip.id;
+    this.renderTracks();
+    this.showToast('✂️ Đã cắt Clip thành công tại vị trí Playhead!', 'info');
+  }
+
+  duplicateActiveClip() {
+    let targetClip = null;
+    let targetTrack = null;
+
+    this.currentProject.tracks.forEach(t => {
+      if (t.clips) {
+        t.clips.forEach(c => {
+          if (c.id === this.activeClipId) {
+            targetClip = c;
+            targetTrack = t;
+          }
+        });
+      }
+    });
+
+    if (!targetClip || !targetTrack) {
+      this.showToast('⚠️ Nhấp chọn 1 Clip để nhân bản!', 'warning');
+      return;
+    }
+
+    const dupClip = {
+      id: Date.now(),
+      name: `${targetClip.name} (Bản sao)`,
+      startTime: targetClip.startTime + targetClip.duration + 0.5,
+      duration: targetClip.duration,
+      clipType: targetClip.clipType || 'NOTE',
+      noteEvents: targetClip.noteEvents ? targetClip.noteEvents.map(n => ({ ...n })) : []
+    };
+
+    targetTrack.clips.push(dupClip);
+    this.activeClipId = dupClip.id;
+    this.renderTracks();
+    this.showToast('📋 Đã nhân bản Clip!', 'info');
+  }
+
+  deleteActiveClip() {
+    if (!this.activeClipId) {
+      this.showToast('⚠️ Nhấp chọn 1 Clip để xóa!', 'warning');
+      return;
+    }
+
+    this.currentProject.tracks.forEach(t => {
+      if (t.clips) {
+        t.clips = t.clips.filter(c => c.id !== this.activeClipId);
+      }
+    });
+
+    this.activeClipId = null;
+    this.renderTracks();
+    this.showToast('🗑️ Đã xóa Clip!', 'info');
+  }
+
+  setupKeyboardResize() {
+    const handle = document.getElementById('keyboardResizeHandle');
+    const keys = document.getElementById('pianoKeys');
+    if (!handle || !keys) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 62;
+
+    handle.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startY = e.clientY;
+      startHeight = keys.offsetHeight || 62;
+      handle.classList.add('resizing');
+      document.body.style.cursor = 'ns-resize';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dy = startY - e.clientY;
+      const newHeight = Math.max(40, Math.min(220, startHeight + dy));
+      keys.style.height = `${newHeight}px`;
+
+      const whiteKeys = keys.querySelectorAll('.key-white');
+      whiteKeys.forEach(k => k.style.height = `${newHeight}px`);
+
+      const blackKeys = keys.querySelectorAll('.key-black');
+      blackKeys.forEach(k => k.style.height = `${Math.round(newHeight * 0.6)}px`);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        handle.classList.remove('resizing');
+        document.body.style.cursor = '';
+      }
+    });
+  }
+
+  setupPlayheadDragging() {
+    const playhead = document.getElementById('playhead');
+    const tooltip = document.getElementById('playheadTooltip');
+    const ruler = document.querySelector('.timeline-ruler');
+    const container = document.getElementById('tracksContainer');
+    if (!playhead || !container) return;
+
+    let isDragging = false;
+
+    const updatePlayheadFromX = (clientX) => {
+      const rect = container.getBoundingClientRect();
+      const rawX = clientX - rect.left;
+      const clampedX = Math.max(0, rawX);
+      const beat = Math.round((clampedX / 40) * 4) / 4;
+      const bar = Math.floor(beat / 4) + 1;
+      const subBeat = Math.round((beat % 4) * 4) / 4 + 1;
+
+      if (window.audioEngine) {
+        window.audioEngine.currentBeat = Math.round(beat * 4);
+      }
+
+      playhead.style.transform = `translateX(${clampedX}px)`;
+
+      if (tooltip) {
+        tooltip.innerText = `${bar} Bar ${subBeat} Beat (${beat.toFixed(1)}s)`;
+      }
+    };
+
+    playhead.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      playhead.classList.add('dragging');
+      document.body.style.cursor = 'ew-resize';
+      updatePlayheadFromX(e.clientX);
+      e.preventDefault();
+    });
+
+    if (ruler) {
+      ruler.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        playhead.classList.add('dragging');
+        document.body.style.cursor = 'ew-resize';
+        updatePlayheadFromX(e.clientX);
+      });
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      updatePlayheadFromX(e.clientX);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        playhead.classList.remove('dragging');
+        document.body.style.cursor = '';
+        this.renderTracks();
+      }
     });
   }
 
@@ -423,6 +1127,12 @@ class MusicStudioApp {
     if (!confirmed) return;
 
     this.currentProject.tracks = this.currentProject.tracks.filter(t => t.id !== trackId);
+
+    if (this.currentProject.id && typeof trackId === 'number') {
+      fetch(`${this.apiBaseUrl}/projects/${this.currentProject.id}/tracks/${trackId}`, {
+        method: 'DELETE'
+      }).catch(() => {});
+    }
 
     // Reset active track nếu track bị xóa là track đang active
     if (this.activeTrackId === trackId) {
@@ -563,7 +1273,10 @@ class MusicStudioApp {
   }
 
   playVirtualKey(pitch) {
-    window.audioEngine.playNote(pitch, 0.5, this.activeInstrument, 0.8, 0);
+    const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId);
+    const inst = activeTrack ? activeTrack.instrument : this.activeInstrument;
+    const pan = activeTrack ? activeTrack.pan || 0 : 0;
+    window.audioEngine.playNote(pitch, 0.5, inst, 0.8, pan);
 
     const keyEl = document.querySelector(`[data-note="${pitch}"]`);
     if (keyEl) {
@@ -574,6 +1287,10 @@ class MusicStudioApp {
 
   openPianoRollModal() {
     this.renderPianoRollGrid();
+    const activeTrack = this.currentProject.tracks.find(t => t.id === this.activeTrackId);
+    const inst = activeTrack ? activeTrack.instrument : this.activeInstrument;
+    const prSelect = document.getElementById('pianoRollInstrumentSelect');
+    if (prSelect) prSelect.value = inst;
     document.getElementById('pianoRollModal').classList.add('active');
   }
 
@@ -1345,15 +2062,19 @@ class MusicStudioApp {
   generateLocalAiChatResponse(promptText) {
     const p = promptText.toLowerCase();
 
-    // Check if user is asking for lyrics, songwriting advice, questions, or conversation
+    // Check if user is asking general questions, lyrics, songwriting advice, or conversation
     const isLyricOrConversation = p.includes('lời') || p.includes('ý tưởng') || p.includes('tại sao') || 
                                    p.includes('tư vấn') || p.includes('lời khuyên') || p.includes('viết') || 
                                    p.includes('sáng tác') || p.includes('vần') || p.includes('chủ đề') || 
+                                   p.includes('giúp') || p.includes('chào') || p.includes('là ai') || 
+                                   p.includes('gì') || p.includes('thế nào') || p.includes('hướng dẫn') ||
                                    (p.includes('hát') && !p.includes('hát thử'));
 
     if (isLyricOrConversation) {
       let text = '';
-      if (p.includes('vần') || p.includes('lời')) {
+      if (p.includes('giúp') || p.includes('chào') || p.includes('là ai') || p.includes('gì')) {
+        text = `🤖 **Xin chào! Tôi là AI Music Copilot — Trợ lý Producer âm nhạc của bạn.**\n\nTôi có thể hỗ trợ bạn:\n* 🎵 **Sáng tạo giai điệu & hợp âm**: Tạo giai điệu Piano, Drums, Bass, Synth, Guitar, Strings theo bất kỳ phong cách nào (Lofi, Pop, Jazz, Minor...)\n* ✍️ **Sáng tác lời ca & Gieo vần**: Tư vấn vần điệu, câu hát và cấu trúc bài hát (Verse/Chorus/Bridge)\n* 🎛️ **Tư vấn phối khí & Mixer**: Khuyên chọn dải tần âm thanh và thông số hiệu ứng sound.\n\n*Hãy thử đề xuất bất kỳ ý tưởng nào cho tôi!*`;
+      } else if (p.includes('vần') || p.includes('lời')) {
         text = `✍️ **AI Lyric Copilot gợi ý lời ca & vần điệu cho bạn**:\n\n* **Câu gợi ý**: *"Đêm nay mưa rơi nhẹ rơi ngoài hiên vắng..."*\n* **Vần điệu hợp**: *vắng - trống - ngóng - mộng - đắng*\n* **Mẹo sáng tác**: Điệp khúc nên có từ 14-18 từ với cao độ nốt vươn cao ở câu thứ 3 để tạo điểm nhấn!`;
       } else if (p.includes('tại sao') || p.includes('khuyên') || p.includes('tư vấn')) {
         text = `💡 **Lời khuyên phối khí từ AI Copilot**:\n\nĐể bài hát của bạn có chiều sâu hơn, bạn nên kết hợp tiếng **Grand Piano** làm âm giai chủ đạo, thêm dải **Deep Bass** đi nền nốt C2-G2 và đệm tiếng **Drums Lofi** nhịp gõ 80-90 BPM!`;
@@ -1664,8 +2385,8 @@ class MusicStudioApp {
     // Call backend accept API if suggestion ID exists
     if (suggestion.id && typeof suggestion.id === 'number') {
       const projectId = (this.currentProject && this.currentProject.id) ? this.currentProject.id : 1;
-      fetch(`${this.apiBaseUrl}/projects/${projectId}/ai/suggestions/${suggestion.id}/accept`, {
-        method: 'POST'
+      fetch(`${this.apiBaseUrl}/projects/${projectId}/ai/suggestions/${suggestion.id}/status?status=ACCEPTED`, {
+        method: 'PUT'
       }).catch(() => {});
     }
 
@@ -2006,6 +2727,51 @@ class MusicStudioApp {
     const playerBar = document.getElementById('vocalPlayerBar');
     if (playerBar) playerBar.style.display = 'none';
     window.audioEngine.stopPlayback();
+  }
+
+  toggleAutoTune(enabled) {
+    if (window.audioEngine && window.audioEngine.autoTuneProcessor) {
+      window.audioEngine.autoTuneProcessor.setSpeed(enabled ? 0.8 : 0);
+    }
+    this.showToast(enabled ? '🎙️ Đã bật AutoTune' : '🎙️ Đã tắt AutoTune', 'info');
+  }
+
+  setRetuneSpeed(val) {
+    const speed = parseFloat(val) / 100;
+    if (window.audioEngine && window.audioEngine.autoTuneProcessor) {
+      window.audioEngine.autoTuneProcessor.setSpeed(speed);
+    }
+  }
+
+  adjustZoom(delta) {
+    this.zoomFactor = Math.max(0.5, Math.min(2.5, (this.zoomFactor || 1.0) + delta));
+    this.applyZoom();
+  }
+
+  setZoomLevel(val) {
+    this.zoomFactor = Math.max(0.5, Math.min(2.5, parseFloat(val) || 1.0));
+    this.applyZoom();
+  }
+
+  resetZoom() {
+    this.zoomFactor = 1.0;
+    this.applyZoom();
+  }
+
+  applyZoom() {
+    const arranger = document.querySelector('.track-arranger');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const zoomValueLabel = document.getElementById('zoomValueLabel');
+    if (arranger) {
+      arranger.style.transform = `scaleX(${this.zoomFactor})`;
+      arranger.style.transformOrigin = 'left top';
+    }
+    if (zoomSlider) {
+      zoomSlider.value = Math.round(this.zoomFactor * 100);
+    }
+    if (zoomValueLabel) {
+      zoomValueLabel.innerText = `${Math.round(this.zoomFactor * 100)}%`;
+    }
   }
 
   setStudioMode(mode) {
